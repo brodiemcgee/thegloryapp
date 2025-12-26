@@ -33,7 +33,12 @@
       "mcp__vercel__web_fetch_vercel_url",
       "WebFetch(domain:thegloryapp.vercel.app)",
       "Bash(git fetch:*)",
-      "WebFetch(domain:thegloryapp-1mxbotafy-contact-7048s-projects.vercel.app)"
+      "WebFetch(domain:thegloryapp-1mxbotafy-contact-7048s-projects.vercel.app)",
+      "Bash(git push:*)",
+      "mcp__supabase__get_logs",
+      "mcp__supabase__search_docs",
+      "Bash(npx supabase:*)",
+      "mcp__supabase__execute_sql"
     ]
   },
   "enableAllProjectMcpServers": true,
