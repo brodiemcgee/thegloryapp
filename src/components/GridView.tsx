@@ -151,7 +151,7 @@ export default function GridView() {
       )}
 
       {/* User grid/list */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-2">
         {filteredUsers.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-hole-muted">No users match your filters</p>
@@ -160,7 +160,7 @@ export default function GridView() {
           <div
             className={
               viewMode === 'grid'
-                ? 'grid grid-cols-2 sm:grid-cols-3 gap-3'
+                ? 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1.5'
                 : 'flex flex-col gap-2'
             }
           >

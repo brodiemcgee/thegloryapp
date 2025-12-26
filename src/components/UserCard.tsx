@@ -78,7 +78,7 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col bg-hole-surface rounded-lg overflow-hidden transition-transform active:scale-95"
+      className="flex flex-col bg-hole-surface rounded-md overflow-hidden transition-transform active:scale-95"
     >
       {/* Image */}
       <div className="relative aspect-square bg-hole-border">
@@ -90,28 +90,27 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-4xl text-hole-muted">?</span>
+            <span className="text-2xl text-hole-muted">?</span>
           </div>
         )}
         {/* Online indicator */}
         {user.is_online && (
-          <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-hole-surface" />
+          <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-hole-surface" />
         )}
-        {/* Intent badge */}
-        <div className={`absolute bottom-2 left-2 p-1.5 bg-black/60 rounded-full ${intentColor}`}>
-          <IntentIcon className="w-4 h-4" />
-        </div>
+        {/* Verified badge */}
+        {user.is_verified && (
+          <div className="absolute top-1 left-1">
+            <CheckIcon className="w-3 h-3 text-blue-500 drop-shadow-md" />
+          </div>
+        )}
       </div>
 
-      {/* Info */}
-      <div className="p-2">
-        <div className="flex items-center gap-1">
-          <span className="font-medium text-sm truncate">{user.username}</span>
-          {user.is_verified && <CheckIcon className="w-3 h-3 text-blue-500 flex-shrink-0" />}
-        </div>
-        <p className="text-xs text-hole-muted">
+      {/* Info - minimal */}
+      <div className="px-1 py-0.5">
+        <span className="font-medium text-[10px] truncate block leading-tight">{user.username}</span>
+        <span className="text-[9px] text-hole-muted leading-tight">
           {formatDistance(user.distance_km)}
-        </p>
+        </span>
       </div>
     </button>
   );
