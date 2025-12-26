@@ -11,25 +11,50 @@ import { useGlobalNavShortcuts } from '@/hooks/admin/useKeyboardShortcuts';
 import LoadingScreen from '@/components/LoadingScreen';
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isAdmin, isLoading, adminRole } = useAdminAuth();
+  const { isAdmin, isLoading, adminRole, user } = useAdminAuth();
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
 
   // Enable global keyboard shortcuts for navigation
   useGlobalNavShortcuts();
 
+  // Debug: Show auth state for 5 seconds before redirecting
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      router.push('/');
+    if (!isLoading && !isAdmin && showDebug) {
+      console.log('[AdminLayout] Not admin, will redirect in 5s. User:', user?.id, 'isAdmin:', isAdmin);
+      const timer = setTimeout(() => {
+        setShowDebug(false);
+        router.push('/');
+      }, 5000);
+      return () => clearTimeout(timer);
     }
-  }, [isAdmin, isLoading, router]);
+  }, [isAdmin, isLoading, router, user, showDebug]);
 
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   if (!isAdmin) {
-    return null;
+    // Show debug info before redirecting
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold mb-4">Admin Access Denied</h1>
+          <div className="bg-gray-800 rounded-lg p-4 text-left text-sm mb-4">
+            <p><strong>User ID:</strong> {user?.id || 'Not logged in'}</p>
+            <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
+            <p><strong>isAdmin:</strong> {String(isAdmin)}</p>
+            <p><strong>adminRole:</strong> {adminRole || 'null'}</p>
+          </div>
+          <p className="text-gray-400 mb-4">
+            {user ? 'You are logged in but not an admin.' : 'You are not logged in.'}
+          </p>
+          <p className="text-gray-500 text-sm">Redirecting to home in 5 seconds...</p>
+          <p className="text-gray-600 text-xs mt-2">Check browser console for [AdminAuth] logs</p>
+        </div>
+      </div>
+    );
   }
 
   return (
