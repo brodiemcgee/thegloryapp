@@ -8,11 +8,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { mockUsers, mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
-import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon } from './icons';
+import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon } from './icons';
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
-import AddLocationButton from './AddLocationButton';
 import { Location, User } from '@/types';
 import { calculateDistance, isWithinRadius } from '@/lib/geo';
 
@@ -363,8 +362,9 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* Location button - bottom right */}
-      <div className="absolute bottom-4 right-4">
+      {/* Bottom right buttons - stacked vertically */}
+      <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-10">
+        {/* Location button */}
         <button
           onClick={recenterMap}
           disabled={isLocating || geoLoading}
@@ -378,6 +378,15 @@ export default function MapView() {
           aria-label="Find my location"
         >
           <NavigationIcon className="w-5 h-5" />
+        </button>
+
+        {/* Add location button */}
+        <button
+          onClick={() => setIsAddLocationModalOpen(true)}
+          className="p-3 bg-hole-accent hover:bg-red-600 text-white rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+          aria-label="Add location"
+        >
+          <PlusIcon className="w-5 h-5" />
         </button>
       </div>
 
@@ -393,9 +402,6 @@ export default function MapView() {
           </div>
         )}
       </div>
-
-      {/* Add Location Button (FAB) */}
-      <AddLocationButton onClick={() => setIsAddLocationModalOpen(true)} />
 
       {/* Add Location Modal */}
       <AddLocationModal
