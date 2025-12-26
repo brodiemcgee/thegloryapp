@@ -1,0 +1,400 @@
+// Profile/Me screen - user's own profile with settings
+
+'use client';
+
+import { useState } from 'react';
+import { currentUser } from '@/data/mockData';
+import { useSettings } from '@/hooks/useSettings';
+import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon } from './icons';
+import { Intent, Availability } from '@/types';
+import BlockedUsersScreen from './BlockedUsersScreen';
+import ProfilePhotoEditor from './ProfilePhotoEditor';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useProfileViews } from '@/hooks/useProfileViews';
+import { useGhostMode } from '@/hooks/useGhostMode';
+import SubscriptionModal from './SubscriptionModal';
+import ProfileViewersScreen from './ProfileViewersScreen';
+import PaywallModal from './PaywallModal';
+
+export default function ProfileView() {
+  const { settings, toggleSfwMode, toggleLocation, updateSettings } = useSettings();
+  const { user: authUser } = useAuth();
+  const { subscription, isPremium } = useSubscription();
+  const { viewCount } = useProfileViews();
+  const { isGhostModeEnabled, canUseGhostMode, toggleGhostMode } = useGhostMode();
+  const [user, setUser] = useState(currentUser);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false);
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showProfileViewers, setShowProfileViewers] = useState(false);
+  const [showPaywall, setShowPaywall] = useState<string | null>(null);
+
+  const intentOptions: { value: Intent; label: string }[] = [
+    { value: 'looking', label: 'Looking' },
+    { value: 'hosting', label: 'Hosting' },
+    { value: 'traveling', label: 'Traveling' },
+    { value: 'discrete', label: 'Discrete' },
+  ];
+
+  const availabilityOptions: { value: Availability; label: string }[] = [
+    { value: 'now', label: 'Now' },
+    { value: 'today', label: 'Today' },
+    { value: 'later', label: 'Later' },
+    { value: 'offline', label: 'Offline' },
+  ];
+
+  const handleSignOut = () => {
+    // TODO: Implement actual sign out
+    alert('Sign out clicked');
+  };
+
+  const handleGhostModeToggle = () => {
+    const result = toggleGhostMode();
+    if (result.requiresPremium) {
+      setShowPaywall('ghost_mode');
+    }
+  };
+
+  if (showBlockedUsers) {
+    return <BlockedUsersScreen onBack={() => setShowBlockedUsers(false)} />;
+  }
+
+  if (showProfileViewers) {
+    return (
+      <ProfileViewersScreen
+        onBack={() => setShowProfileViewers(false)}
+        onUpgrade={() => {
+          setShowProfileViewers(false);
+          setShowSubscriptionModal(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-hole-bg overflow-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-hole-border">
+        <h1 className="text-lg font-semibold">Profile</h1>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className={`p-2 rounded-lg transition-colors ${
+            showSettings ? 'bg-hole-accent text-white' : 'hover:bg-hole-surface'
+          }`}
+          aria-label="Settings"
+        >
+          <SettingsIcon className="w-5 h-5" />
+        </button>
+      </div>
+
+      {showSettings ? (
+        // Settings view
+        <div className="flex-1 p-4 space-y-6">
+          <h2 className="text-lg font-semibold">Settings</h2>
+
+          {/* Toggle settings */}
+          <div className="space-y-4">
+            <ToggleSetting
+              label="SFW Mode"
+              description="Hide explicit content"
+              enabled={settings.sfw_mode}
+              onToggle={toggleSfwMode}
+            />
+            <ToggleSetting
+              label="Location Sharing"
+              description="Show your location to others"
+              enabled={settings.location_enabled}
+              onToggle={toggleLocation}
+            />
+            <ToggleSetting
+              label="Push Notifications"
+              description="Get notified of new messages"
+              enabled={settings.push_notifications}
+              onToggle={() => updateSettings({ push_notifications: !settings.push_notifications })}
+            />
+            <ToggleSetting
+              label="Ghost Mode"
+              description="Browse without being seen"
+              enabled={isGhostModeEnabled}
+              onToggle={handleGhostModeToggle}
+              isPremium={!canUseGhostMode}
+            />
+            <ToggleSetting
+              label="Hide from Contacts"
+              description="Don't show to phone contacts"
+              enabled={settings.hide_from_contacts}
+              onToggle={() => updateSettings({ hide_from_contacts: !settings.hide_from_contacts })}
+            />
+          </div>
+
+          {/* Blocked Users link */}
+          <button
+            onClick={() => setShowBlockedUsers(true)}
+            className="w-full flex items-center justify-between p-4 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+          >
+            <div className="flex items-center gap-3">
+              <BlockIcon className="w-5 h-5" />
+              <span className="font-medium">Blocked Users</span>
+            </div>
+            <svg className="w-5 h-5 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Sign out */}
+          <button
+            onClick={handleSignOut}
+            className="w-full py-3 bg-hole-surface border border-hole-border text-hole-accent rounded-lg font-medium transition-colors hover:bg-hole-border"
+          >
+            Sign Out
+          </button>
+        </div>
+      ) : (
+        // Profile view
+        <div className="flex-1 p-4 space-y-6">
+          {/* Profile header */}
+          <div className="flex flex-col items-center">
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xl font-semibold">{user.username}</span>
+              {user.is_verified && <CheckIcon className="w-5 h-5 text-blue-500" />}
+            </div>
+            {!user.is_verified && (
+              <button className="mt-2 text-sm text-blue-500 underline">
+                Get verified
+              </button>
+            )}
+          </div>
+
+          {/* Photo Editor */}
+          {authUser && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm text-hole-muted">Photos</label>
+                <button
+                  onClick={() => setShowPhotoEditor(!showPhotoEditor)}
+                  className="text-sm text-hole-accent hover:underline"
+                >
+                  {showPhotoEditor ? 'Done' : 'Edit'}
+                </button>
+              </div>
+              {showPhotoEditor ? (
+                <ProfilePhotoEditor
+                  userId={authUser.id}
+                  currentPhotos={user.photos.map((url, index) => ({
+                    name: `photo-${index}`,
+                    path: url,
+                    url: url,
+                    isPrimary: index === 0,
+                  }))}
+                  onPhotosChange={(photos) => {
+                    const photoUrls = photos.map(p => p.url);
+                    setUser({ ...user, photos: photoUrls, avatar_url: photos.find(p => p.isPrimary)?.url || photoUrls[0] || null });
+                  }}
+                />
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {user.photos.slice(0, 6).map((photo, index) => (
+                    <div key={index} className="aspect-square rounded-lg overflow-hidden bg-hole-surface">
+                      <img
+                        src={photo}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {user.photos.length === 0 && (
+                    <div className="aspect-square rounded-lg border-2 border-dashed border-hole-border flex items-center justify-center">
+                      <span className="text-xs text-hole-muted">No photos</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Intent selector */}
+          <div>
+            <label className="text-sm text-hole-muted mb-2 block">Intent</label>
+            <div className="grid grid-cols-2 gap-2">
+              {intentOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setUser({ ...user, intent: opt.value })}
+                  className={`py-3 px-4 rounded-lg text-sm font-medium transition-colors ${
+                    user.intent === opt.value
+                      ? 'bg-hole-accent text-white'
+                      : 'bg-hole-surface text-gray-300 hover:bg-hole-border'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Availability selector */}
+          <div>
+            <label className="text-sm text-hole-muted mb-2 block">Availability</label>
+            <div className="grid grid-cols-4 gap-2">
+              {availabilityOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setUser({ ...user, availability: opt.value })}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    user.availability === opt.value
+                      ? 'bg-green-500 text-white'
+                      : 'bg-hole-surface text-gray-300 hover:bg-hole-border'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="text-sm text-hole-muted mb-2 block">About</label>
+            <textarea
+              value={user.bio || ''}
+              onChange={(e) => setUser({ ...user, bio: e.target.value })}
+              placeholder="Write something about yourself..."
+              className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent transition-colors resize-none"
+              rows={3}
+            />
+          </div>
+
+          {/* Subscription status */}
+          {isPremium ? (
+            <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CrownIcon className="w-5 h-5 text-purple-400" />
+                <h3 className="font-semibold">
+                  {subscription.tier === 'premium' ? 'Premium' : 'Premium+'} Member
+                </h3>
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                {subscription.expiresAt &&
+                  `Renews ${new Date(subscription.expiresAt).toLocaleDateString()}`}
+              </p>
+              <button
+                onClick={() => setShowSubscriptionModal(true)}
+                className="w-full py-2 bg-white/10 border border-white/20 text-white rounded-lg font-medium hover:bg-white/20 transition-colors"
+              >
+                Manage Subscription
+              </button>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-500/30 rounded-lg p-4">
+              <h3 className="font-semibold mb-1">Upgrade to Premium</h3>
+              <p className="text-sm text-gray-300 mb-3">
+                Unlimited messages, ghost mode, see who viewed you
+              </p>
+              <button
+                onClick={() => setShowSubscriptionModal(true)}
+                className="w-full py-2 bg-white text-black rounded-lg font-medium hover:bg-gray-100 transition-colors"
+              >
+                View Plans
+              </button>
+            </div>
+          )}
+
+          {/* Who Viewed Me */}
+          <button
+            onClick={() => setShowProfileViewers(true)}
+            className="w-full flex items-center justify-between p-4 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+          >
+            <div className="flex items-center gap-3">
+              <EyeIcon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Who Viewed Me</div>
+                <div className="text-sm text-hole-muted">
+                  {viewCount > 0 ? `${viewCount} recent views` : 'See who checked you out'}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {viewCount > 0 && (
+                <span className="bg-hole-accent text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {viewCount}
+                </span>
+              )}
+              {!isPremium && (
+                <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">
+                  Premium
+                </span>
+              )}
+              <svg
+                className="w-5 h-5 text-hole-muted"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showSubscriptionModal && (
+        <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
+      )}
+      {showPaywall && (
+        <PaywallModal
+          featureName={showPaywall}
+          onClose={() => setShowPaywall(null)}
+          onSubscribe={() => {
+            setShowPaywall(null);
+            setShowSubscriptionModal(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Toggle setting component
+interface ToggleSettingProps {
+  label: string;
+  description: string;
+  enabled: boolean;
+  onToggle: () => void;
+  isPremium?: boolean;
+}
+
+function ToggleSetting({ label, description, enabled, onToggle, isPremium }: ToggleSettingProps) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{label}</span>
+          {isPremium && (
+            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">
+              Premium
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-hole-muted">{description}</p>
+      </div>
+      <button
+        onClick={onToggle}
+        className={`w-12 h-7 rounded-full transition-colors relative ${
+          enabled ? 'bg-hole-accent' : 'bg-hole-border'
+        }`}
+        role="switch"
+        aria-checked={enabled}
+      >
+        <span
+          className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+            enabled ? 'left-6' : 'left-1'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}

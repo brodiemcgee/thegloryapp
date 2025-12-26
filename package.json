@@ -1,0 +1,28 @@
+{
+  "name": "thehole-app",
+  "version": "1.0.0",
+  "description": "Mobile-first cruising app",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
+    "@turf/distance": "^7.3.1",
+    "@turf/turf": "^7.3.1",
+    "@types/mapbox-gl": "^3.4.1",
+    "@types/node": "^25.0.3",
+    "@types/react": "^19.2.7",
+    "autoprefixer": "^10.4.23",
+    "mapbox-gl": "^3.17.0",
+    "next": "^14.2.35",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  }
+}

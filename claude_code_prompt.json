@@ -1,0 +1,110 @@
+{
+  "project_name": "thehole.app",
+  "tech_stack": {
+    "frontend": "Next.js + React + TailwindCSS",
+    "backend": "Supabase (Postgres, Auth, Realtime, Storage)",
+    "hosting": "Vercel",
+    "realtime": "Supabase Realtime Channels",
+    "mapping": "Mapbox GL JS + Turf.js",
+    "auth": "Supabase Auth with phone/email",
+    "storage": "Supabase Storage with optional NSFW tagging"
+  },
+  "design_principles": {
+    "tone": "Minimal, sexually direct, discreet by default, explicit by user opt-in",
+    "branding": {
+      "name": "thehole.app",
+      "logo": "wordmark with 'o' styled as a glory hole (solid ring with dark center)",
+      "default_mode": "NSFW",
+      "sfw_toggle": "available at all times"
+    },
+    "accessibility": {
+      "contrast": "WCAG AA",
+      "motion": "150–250ms transitions, reduced motion supported",
+      "touch": "Large targets, font scaling allowed"
+    }
+  },
+  "navigation_tabs": ["Map", "Grid", "Messages", "Me"],
+  "screens": {
+    "Map": {
+      "features": [
+        "Interactive Mapbox map",
+        "Heatmap or user-dot toggle",
+        "Spot tap opens drawer with location info",
+        "Realtime presence updates",
+        "Floating filters and recenter buttons"
+      ]
+    },
+    "Grid": {
+      "layout": "Grid/List toggle",
+      "user_cards": [
+        "Image or silhouette",
+        "Distance",
+        "Intent icon",
+        "Tap to profile"
+      ],
+      "filters": ["Intent", "Distance", "Verified only"]
+    },
+    "Messages": {
+      "tabs": ["All", "Verified", "Requests"],
+      "chat": {
+        "features": [
+          "Image support",
+          "Typing indicators",
+          "Block/report tools",
+          "Realtime messaging"
+        ]
+      }
+    },
+    "Me": {
+      "profile": {
+        "editable_fields": [
+          "Photos",
+          "Username",
+          "Intent toggle",
+          "Availability",
+          "Hide from contacts",
+          "Verification"
+        ],
+        "settings": [
+          "SFW toggle",
+          "Location toggle",
+          "Push notifications",
+          "Log out"
+        ]
+      },
+      "subscription_features": [
+        "Unlimited messaging",
+        "Ghost mode",
+        "Who viewed me"
+      ]
+    }
+  },
+  "extra_flows": {
+    "onboarding": [
+      "Phone/email verification",
+      "Intent and visibility settings",
+      "SFW consent"
+    ],
+    "add_location": [
+      "Drop pin or search address",
+      "Name + description + type",
+      "Submit to moderation"
+    ],
+    "report": [
+      "Inline reporting",
+      "Block option",
+      "Custom reason field"
+    ]
+  },
+  "output_request": {
+    "goal": "Generate UI components and flows in modular React (preferably with TailwindCSS)",
+    "priority_screens": ["Map", "Grid", "Messages", "Me"],
+    "scope": "MVP",
+    "design_constraints": [
+      "All actions ≤3 taps",
+      "One floating action per screen max",
+      "NSFW content opt-in required",
+      "Realtime performance prioritized"
+    ]
+  }
+}
