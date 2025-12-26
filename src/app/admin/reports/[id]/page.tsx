@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { cn, formatDateTime, formatRelativeTime } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/admin/useAdminAuth';
+import { useAuditLog } from '@/hooks/admin/useAuditLog';
 import toast from 'react-hot-toast';
 
 interface ReportDetail {
@@ -83,6 +84,7 @@ export default function ReportDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { adminRoleId, isSuperAdmin } = useAdminAuth();
+  const { logReportAction, logModeration } = useAuditLog();
   const reportId = params.id as string;
 
   const [report, setReport] = useState<ReportDetail | null>(null);
@@ -146,6 +148,7 @@ export default function ReportDetailPage() {
         .eq('id', reportId);
 
       if (error) throw error;
+      await logReportAction('assign', reportId, { reason: report?.reason });
       toast.success('Report assigned to you');
       loadReport();
     } catch (error) {
@@ -189,6 +192,11 @@ export default function ReportDetailPage() {
         .eq('id', reportId);
 
       if (error) throw error;
+      await logReportAction(dismiss ? 'dismiss' : 'resolve', reportId, {
+        action_taken: action,
+        reason: report?.reason,
+        reported_user: report?.reported?.username
+      });
       toast.success(dismiss ? 'Report dismissed' : 'Report resolved');
       router.push('/admin/reports');
     } catch (error) {
@@ -214,6 +222,12 @@ export default function ReportDetailPage() {
 
       if (error) throw error;
 
+      await logModeration('suspend', report.reported_id, {
+        duration_days: days,
+        username: report.reported.username,
+        from_report: reportId
+      });
+
       // Resolve the report
       await resolveReport(`Suspended for ${days} days`);
       toast.success(`User suspended for ${days} days`);
@@ -238,6 +252,11 @@ export default function ReportDetailPage() {
       });
 
       if (error) throw error;
+
+      await logModeration('ban', report.reported_id, {
+        username: report.reported.username,
+        from_report: reportId
+      });
 
       // Resolve the report
       await resolveReport('Permanently banned');

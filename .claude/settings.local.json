@@ -40,7 +40,8 @@
       "Bash(npx supabase:*)",
       "mcp__supabase__execute_sql",
       "mcp__vercel__get_project",
-      "WebSearch"
+      "WebSearch",
+      "mcp__supabase__list_migrations"
     ]
   },
   "enableAllProjectMcpServers": true,

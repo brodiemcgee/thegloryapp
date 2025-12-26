@@ -1,6 +1,6 @@
 // Type definitions for thehole.app
 
-export type Intent = 'looking' | 'hosting' | 'traveling' | 'discrete';
+export type Intent = 'chatting' | 'looking_now' | 'looking_later' | 'friends';
 
 export type Availability = 'now' | 'today' | 'later' | 'offline';
 

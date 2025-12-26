@@ -32,10 +32,10 @@ export default function ProfileView() {
   const [showPaywall, setShowPaywall] = useState<string | null>(null);
 
   const intentOptions: { value: Intent; label: string }[] = [
-    { value: 'looking', label: 'Looking' },
-    { value: 'hosting', label: 'Hosting' },
-    { value: 'traveling', label: 'Traveling' },
-    { value: 'discrete', label: 'Discrete' },
+    { value: 'looking_now', label: 'Looking Now' },
+    { value: 'looking_later', label: 'Looking Later' },
+    { value: 'chatting', label: 'Chatting' },
+    { value: 'friends', label: 'Friends' },
   ];
 
   const availabilityOptions: { value: Availability; label: string }[] = [

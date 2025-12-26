@@ -56,7 +56,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         .upsert({
           id: user.id,
           username: username.toLowerCase(),
-          intent: 'looking',  // Default intent, can be changed in-app
+          intent: 'chatting',  // Default intent, can be changed in-app
           availability: 'now',  // Default availability
           onboarded: true,
           updated_at: new Date().toISOString(),

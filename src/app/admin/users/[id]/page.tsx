@@ -22,6 +22,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { cn, formatDateTime, formatRelativeTime, formatDate } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/admin/useAdminAuth';
+import { useAuditLog } from '@/hooks/admin/useAuditLog';
 import toast from 'react-hot-toast';
 
 interface UserDetail {
@@ -75,6 +76,7 @@ export default function UserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { adminRoleId, isSuperAdmin } = useAdminAuth();
+  const { logModeration, logView } = useAuditLog();
   const userId = params.id as string;
 
   const [user, setUser] = useState<UserDetail | null>(null);
@@ -164,6 +166,7 @@ export default function UserDetailPage() {
       });
 
       if (error) throw error;
+      await logModeration('suspend', userId, { duration_days: days, username: user?.username });
       toast.success(`User suspended for ${days} days`);
       loadUserData();
     } catch (error) {
@@ -186,6 +189,7 @@ export default function UserDetailPage() {
       });
 
       if (error) throw error;
+      await logModeration('ban', userId, { username: user?.username });
       toast.success('User permanently banned');
       loadUserData();
     } catch (error) {
@@ -206,6 +210,7 @@ export default function UserDetailPage() {
       });
 
       if (error) throw error;
+      await logModeration('unban', userId, { username: user?.username });
       toast.success('User unbanned');
       loadUserData();
     } catch (error) {
@@ -230,6 +235,7 @@ export default function UserDetailPage() {
         .eq('id', userId);
 
       if (error) throw error;
+      await logModeration('verify', userId, { username: user?.username });
       toast.success('User verified');
       loadUserData();
     } catch (error) {

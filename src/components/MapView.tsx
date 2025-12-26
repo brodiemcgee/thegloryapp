@@ -12,7 +12,7 @@ import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon } from 
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
-import { Location, User } from '@/types';
+import { Location, User, Intent } from '@/types';
 import { calculateDistance, isWithinRadius } from '@/lib/geo';
 
 // Set Mapbox token - will use env var in production
@@ -20,8 +20,6 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 // Default radius for filtering users (in km)
 const DEFAULT_RADIUS_KM = 10;
-
-type Intent = 'looking' | 'hosting' | 'traveling' | 'discrete';
 
 const INTENT_OPTIONS: { value: Intent | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -107,10 +105,10 @@ export default function MapView() {
   // Get ring color based on user intent
   const getIntentColor = (intent: Intent): string => {
     switch (intent) {
-      case 'looking': return '#3b82f6'; // Blue
-      case 'hosting': return '#f97316'; // Orange
-      case 'traveling': return '#8b5cf6'; // Purple
-      case 'discrete': return '#6b7280'; // Gray
+      case 'looking_now': return '#ef4444'; // Red - urgent/active
+      case 'looking_later': return '#3b82f6'; // Blue - calm
+      case 'chatting': return '#f59e0b'; // Amber - conversation
+      case 'friends': return '#22c55e'; // Green - non-sexual
       default: return '#3b82f6';
     }
   };
