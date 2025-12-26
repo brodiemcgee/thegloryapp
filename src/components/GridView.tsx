@@ -66,10 +66,10 @@ export default function GridView() {
 
   const intentOptions: { value: FilterOption; label: string }[] = [
     { value: 'all', label: 'All' },
-    { value: 'looking', label: 'Looking' },
-    { value: 'hosting', label: 'Hosting' },
-    { value: 'traveling', label: 'Traveling' },
-    { value: 'discrete', label: 'Discrete' },
+    { value: 'looking_now', label: 'Looking Now' },
+    { value: 'looking_later', label: 'Looking Later' },
+    { value: 'chatting', label: 'Chatting' },
+    { value: 'friends', label: 'Friends' },
   ];
 
   if (selectedUser) {
