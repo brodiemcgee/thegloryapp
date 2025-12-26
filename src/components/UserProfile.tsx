@@ -83,12 +83,16 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
     isFavorite,
     notes,
     hasMet,
-    rating,
+    encounters,
     toggleFavorite,
     updateNotes,
-    toggleMet,
-    setRating,
+    addEncounter,
   } = useUserInteraction(user.id);
+
+  const [showEncounterModal, setShowEncounterModal] = useState(false);
+  const [encounterDate, setEncounterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [encounterNotes, setEncounterNotes] = useState('');
+  const [encounterRating, setEncounterRating] = useState<number | null>(null);
 
   // Sync notes text with stored notes
   useEffect(() => {
@@ -209,13 +213,13 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
           </button>
         )}
 
-        {/* Met button */}
+        {/* Met button - opens encounter modal */}
         <button
-          onClick={toggleMet}
+          onClick={() => setShowEncounterModal(true)}
           className={`p-2 rounded-lg transition-colors ${
             hasMet ? 'text-green-500' : 'hover:bg-hole-surface text-hole-muted'
           }`}
-          aria-label={hasMet ? 'Mark as not met' : 'Mark as met'}
+          aria-label="Log encounter"
         >
           <svg className="w-5 h-5" fill={hasMet ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -352,55 +356,66 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
             </span>
           </div>
 
-          {/* Your Interaction Section - only show when favorited */}
-          {isFavorite && (
-            <div className="bg-hole-surface rounded-lg p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm text-hole-muted font-medium">Your Notes</h3>
+          {/* Your Notes Section - only show when there are notes */}
+          {isFavorite && notes && (
+            <div className="bg-hole-surface rounded-lg p-4">
+              <h3 className="text-sm text-hole-muted font-medium mb-2">Your Notes</h3>
+              <button
+                onClick={() => setShowNotesModal(true)}
+                className="w-full text-left p-3 bg-hole-border rounded-lg text-sm text-gray-300 hover:bg-hole-muted transition-colors"
+              >
+                <span className="line-clamp-3">{notes}</span>
+              </button>
+            </div>
+          )}
 
-                {/* Star Rating - only show when met */}
-                {hasMet && (
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => setRating(rating === star ? null : star)}
-                        className="p-0.5 transition-colors"
-                        aria-label={`Rate ${star} stars`}
-                      >
-                        <svg
-                          className={`w-5 h-5 ${
-                            rating && star <= rating ? 'text-yellow-400' : 'text-hole-muted'
-                          }`}
-                          fill={rating && star <= rating ? 'currentColor' : 'none'}
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                        </svg>
-                      </button>
-                    ))}
+          {/* Encounters Section - show when there are encounters */}
+          {encounters && encounters.length > 0 && (
+            <div className="bg-hole-surface rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm text-hole-muted font-medium">Encounters ({encounters.length})</h3>
+                <button
+                  onClick={() => setShowEncounterModal(true)}
+                  className="text-xs text-hole-accent hover:underline"
+                >
+                  + Add
+                </button>
+              </div>
+              <div className="space-y-2">
+                {encounters.slice(0, 3).map((encounter) => (
+                  <div key={encounter.id} className="p-3 bg-hole-border rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">
+                        {new Date(encounter.met_at).toLocaleDateString()}
+                      </span>
+                      {encounter.rating && (
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-3 h-3 ${star <= encounter.rating! ? 'text-yellow-400' : 'text-hole-muted'}`}
+                              fill={star <= encounter.rating! ? 'currentColor' : 'none'}
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {encounter.notes && (
+                      <p className="text-xs text-gray-400 line-clamp-2">{encounter.notes}</p>
+                    )}
                   </div>
+                ))}
+                {encounters.length > 3 && (
+                  <p className="text-xs text-hole-muted text-center py-1">
+                    +{encounters.length - 3} more encounters
+                  </p>
                 )}
               </div>
-
-              {/* Notes preview or add notes button */}
-              {notes ? (
-                <button
-                  onClick={() => setShowNotesModal(true)}
-                  className="w-full text-left p-3 bg-hole-border rounded-lg text-sm text-gray-300 hover:bg-hole-muted transition-colors"
-                >
-                  <span className="line-clamp-2">{notes}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowNotesModal(true)}
-                  className="w-full text-left p-3 bg-hole-border rounded-lg text-sm text-hole-muted hover:bg-hole-muted transition-colors"
-                >
-                  + Add notes...
-                </button>
-              )}
             </div>
           )}
 
@@ -636,6 +651,108 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
                 className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Encounter Modal */}
+      {showEncounterModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowEncounterModal(false)}
+          />
+          <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Log Encounter</h2>
+              <button
+                onClick={() => setShowEncounterModal(false)}
+                className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="text-sm text-hole-muted mb-2 block">When did you meet?</label>
+              <input
+                type="date"
+                value={encounterDate}
+                onChange={(e) => setEncounterDate(e.target.value)}
+                className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
+              />
+            </div>
+
+            {/* Rating */}
+            <div>
+              <label className="text-sm text-hole-muted mb-2 block">How was it?</label>
+              <div className="flex items-center justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setEncounterRating(encounterRating === star ? null : star)}
+                    className="p-1 transition-colors"
+                  >
+                    <svg
+                      className={`w-8 h-8 ${
+                        encounterRating && star <= encounterRating ? 'text-yellow-400' : 'text-hole-muted'
+                      }`}
+                      fill={encounterRating && star <= encounterRating ? 'currentColor' : 'none'}
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-sm text-hole-muted mb-2 block">Notes (optional)</label>
+              <textarea
+                value={encounterNotes}
+                onChange={(e) => setEncounterNotes(e.target.value)}
+                placeholder="What happened? How was it?"
+                className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent transition-colors resize-none"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEncounterModal(false);
+                  setEncounterDate(new Date().toISOString().split('T')[0]);
+                  setEncounterNotes('');
+                  setEncounterRating(null);
+                }}
+                className="flex-1 py-3 bg-hole-surface border border-hole-border rounded-lg font-medium hover:bg-hole-border transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await addEncounter({
+                    met_at: encounterDate,
+                    notes: encounterNotes || undefined,
+                    rating: encounterRating || undefined,
+                  });
+                  setShowEncounterModal(false);
+                  setEncounterDate(new Date().toISOString().split('T')[0]);
+                  setEncounterNotes('');
+                  setEncounterRating(null);
+                }}
+                className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors"
+              >
+                Save Encounter
               </button>
             </div>
           </div>

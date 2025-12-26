@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
@@ -96,8 +96,8 @@ export function usePresence(channelName: string = 'global-presence') {
     };
   }, [user, channelName, settings.ghost_mode]);
 
-  // Update presence with location
-  const updatePresence = async (updates: Partial<PresenceUser>) => {
+  // Update presence with location (memoized to prevent re-render cascades)
+  const updatePresence = useCallback(async (updates: Partial<PresenceUser>) => {
     if (!channel || !user) return;
 
     const currentState = channel.presenceState<PresenceUser>();
@@ -109,7 +109,7 @@ export function usePresence(channelName: string = 'global-presence') {
       user_id: user.id,
       online_at: new Date().toISOString(),
     });
-  };
+  }, [channel, user]);
 
   return {
     onlineUsers,

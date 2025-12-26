@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { mockUsers, mockLocations } from '@/data/mockData';
@@ -62,19 +62,22 @@ export default function MapView() {
 
   // Combine real online users from presence with mock users
   // In production, this would only use onlineUsers from presence
-  const filteredUsers = mockUsers.filter((user) => {
-    // Filter by location if position available
-    if (position && user.location) {
-      if (!isWithinRadius(user.location, position, DEFAULT_RADIUS_KM)) {
+  // Memoized to prevent marker flickering from unnecessary re-renders
+  const filteredUsers = useMemo(() => {
+    return mockUsers.filter((user) => {
+      // Filter by location if position available
+      if (position && user.location) {
+        if (!isWithinRadius(user.location, position, DEFAULT_RADIUS_KM)) {
+          return false;
+        }
+      }
+      // Filter by intent
+      if (intentFilter !== 'all' && user.intent !== intentFilter) {
         return false;
       }
-    }
-    // Filter by intent
-    if (intentFilter !== 'all' && user.intent !== intentFilter) {
-      return false;
-    }
-    return true;
-  });
+      return true;
+    });
+  }, [position, intentFilter]);
 
   // Initialize map
   useEffect(() => {
@@ -370,14 +373,16 @@ export default function MapView() {
     // For now, just log it
   };
 
-  // Prepare heatmap points from filtered users
-  const heatmapPoints = filteredUsers
-    .filter((user) => user.location)
-    .map((user) => ({
-      lat: user.location!.lat,
-      lng: user.location!.lng,
-      weight: user.is_online ? 2 : 1,
-    }));
+  // Prepare heatmap points from filtered users (memoized)
+  const heatmapPoints = useMemo(() => {
+    return filteredUsers
+      .filter((user) => user.location)
+      .map((user) => ({
+        lat: user.location!.lat,
+        lng: user.location!.lng,
+        weight: user.is_online ? 2 : 1,
+      }));
+  }, [filteredUsers]);
 
   return (
     <div className="relative h-full w-full">

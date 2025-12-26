@@ -1,4 +1,4 @@
-// Hook for managing user interactions (favorites, notes, met, ratings)
+// Hook for managing user interactions (favorites, notes, encounters)
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -16,35 +16,61 @@ export interface UserInteraction {
   updated_at: string;
 }
 
+export interface Encounter {
+  id: string;
+  user_id: string;
+  target_user_id: string;
+  met_at: string;
+  notes: string | null;
+  rating: number | null;
+  created_at: string;
+}
+
 export function useUserInteraction(targetUserId: string) {
   const { user } = useAuth();
   const [interaction, setInteraction] = useState<UserInteraction | null>(null);
+  const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch existing interaction
+  // Fetch existing interaction and encounters
   useEffect(() => {
     if (!user || !targetUserId) {
       setLoading(false);
       return;
     }
 
-    const fetchInteraction = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      // Fetch interaction
+      const { data: interactionData, error: interactionError } = await supabase
         .from('user_interactions')
         .select('*')
         .eq('user_id', user.id)
         .eq('target_user_id', targetUserId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching interaction:', error);
+      if (interactionError && interactionError.code !== 'PGRST116') {
+        console.error('Error fetching interaction:', interactionError);
       }
 
-      setInteraction(data);
+      setInteraction(interactionData);
+
+      // Fetch encounters
+      const { data: encountersData, error: encountersError } = await supabase
+        .from('encounters')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('target_user_id', targetUserId)
+        .order('met_at', { ascending: false });
+
+      if (encountersError) {
+        console.error('Error fetching encounters:', encountersError);
+      }
+
+      setEncounters(encountersData || []);
       setLoading(false);
     };
 
-    fetchInteraction();
+    fetchData();
   }, [user, targetUserId]);
 
   // Upsert interaction helper
@@ -100,52 +126,62 @@ export function useUserInteraction(targetUserId: string) {
     await upsertInteraction({ notes });
   }, [upsertInteraction]);
 
-  // Toggle met status
-  const toggleMet = useCallback(async () => {
-    const newValue = !interaction?.has_met;
+  // Add a new encounter
+  const addEncounter = useCallback(async (encounter: {
+    met_at: string;
+    notes?: string;
+    rating?: number;
+  }) => {
+    if (!user) return null;
 
-    setInteraction(prev => prev ? { ...prev, has_met: newValue } : {
-      id: '',
-      user_id: user?.id || '',
-      target_user_id: targetUserId,
-      is_favorite: false,
-      notes: null,
-      has_met: newValue,
-      rating: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const { data, error } = await supabase
+      .from('encounters')
+      .insert({
+        user_id: user.id,
+        target_user_id: targetUserId,
+        met_at: encounter.met_at,
+        notes: encounter.notes || null,
+        rating: encounter.rating || null,
+      })
+      .select()
+      .single();
 
-    await upsertInteraction({ has_met: newValue });
-  }, [interaction, upsertInteraction, user, targetUserId]);
+    if (error) {
+      console.error('Error adding encounter:', error);
+      return null;
+    }
 
-  // Set rating
-  const setRating = useCallback(async (rating: number | null) => {
-    setInteraction(prev => prev ? { ...prev, rating } : {
-      id: '',
-      user_id: user?.id || '',
-      target_user_id: targetUserId,
-      is_favorite: false,
-      notes: null,
-      has_met: false,
-      rating,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    // Add to local state
+    setEncounters(prev => [data, ...prev]);
+    return data;
+  }, [user, targetUserId]);
 
-    await upsertInteraction({ rating });
-  }, [upsertInteraction, user, targetUserId]);
+  // Delete an encounter
+  const deleteEncounter = useCallback(async (encounterId: string) => {
+    const { error } = await supabase
+      .from('encounters')
+      .delete()
+      .eq('id', encounterId);
+
+    if (error) {
+      console.error('Error deleting encounter:', error);
+      return false;
+    }
+
+    setEncounters(prev => prev.filter(e => e.id !== encounterId));
+    return true;
+  }, []);
 
   return {
     interaction,
+    encounters,
     loading,
     isFavorite: interaction?.is_favorite || false,
     notes: interaction?.notes || '',
-    hasMet: interaction?.has_met || false,
-    rating: interaction?.rating || null,
+    hasMet: encounters.length > 0,
     toggleFavorite,
     updateNotes,
-    toggleMet,
-    setRating,
+    addEncounter,
+    deleteEncounter,
   };
 }
