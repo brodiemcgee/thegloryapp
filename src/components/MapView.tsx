@@ -104,6 +104,17 @@ export default function MapView() {
     };
   }, [position]);
 
+  // Get ring color based on user intent
+  const getIntentColor = (intent: Intent): string => {
+    switch (intent) {
+      case 'looking': return '#3b82f6'; // Blue
+      case 'hosting': return '#f97316'; // Orange
+      case 'traveling': return '#8b5cf6'; // Purple
+      case 'discrete': return '#6b7280'; // Gray
+      default: return '#3b82f6';
+    }
+  };
+
   // Update user markers based on view mode and filtered users
   useEffect(() => {
     if (!map.current) return;
@@ -118,23 +129,92 @@ export default function MapView() {
       filteredUsers.forEach((user) => {
         if (!user.location || !map.current) return;
 
+        const ringColor = getIntentColor(user.intent);
+        const initial = user.username.charAt(0).toUpperCase();
+        const hasAvatar = user.avatar_url && user.avatar_url.length > 0;
+
         const el = document.createElement('div');
         el.className = 'user-marker';
         el.style.cssText = `
-          width: 32px;
-          height: 32px;
-          background: ${user.is_online ? '#ef4444' : '#737373'};
-          border: 2px solid ${user.is_verified ? '#ffffff' : '#404040'};
-          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          position: relative;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           transition: transform 0.2s;
         `;
 
+        // Create the ring/border element
+        const ring = document.createElement('div');
+        ring.style.cssText = `
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 3px solid ${ringColor};
+          ${user.is_online ? `box-shadow: 0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60;` : ''}
+          ${user.is_online ? 'animation: markerPulse 2s infinite;' : ''}
+        `;
+
+        // Create the inner circle with photo or initial
+        const inner = document.createElement('div');
+        inner.style.cssText = `
+          position: absolute;
+          inset: 4px;
+          border-radius: 50%;
+          background: ${hasAvatar ? `url(${user.avatar_url}) center/cover` : '#1f2937'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 16px;
+          color: white;
+          overflow: hidden;
+        `;
+
+        if (!hasAvatar) {
+          inner.textContent = initial;
+        }
+
+        // Add verified badge if verified
+        if (user.is_verified) {
+          const badge = document.createElement('div');
+          badge.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 14px;
+            height: 14px;
+            background: #22c55e;
+            border: 2px solid #0a0a0a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          `;
+          badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" fill="none"/></svg>`;
+          el.appendChild(badge);
+        }
+
+        // Add online indicator dot
+        if (user.is_online) {
+          const onlineDot = document.createElement('div');
+          onlineDot.style.cssText = `
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border: 2px solid #0a0a0a;
+            border-radius: 50%;
+          `;
+          el.appendChild(onlineDot);
+        }
+
+        el.appendChild(ring);
+        el.appendChild(inner);
+
         el.addEventListener('mouseenter', () => {
-          el.style.transform = 'scale(1.2)';
+          el.style.transform = 'scale(1.15)';
         });
 
         el.addEventListener('mouseleave', () => {

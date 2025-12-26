@@ -2,11 +2,15 @@
 
 import { User, Location, Conversation, Message } from '@/types';
 
+// Placeholder avatar URLs (using UI Avatars service for demo)
+const getAvatarUrl = (name: string, bg: string = '1f2937') =>
+  `https://ui-avatars.com/api/?name=${name}&background=${bg}&color=fff&size=128&bold=true`;
+
 export const mockUsers: User[] = [
   {
     id: '1',
     username: 'hungdude',
-    avatar_url: null,
+    avatar_url: getAvatarUrl('H', '3b82f6'),
     intent: 'looking',
     availability: 'now',
     is_verified: true,
@@ -21,7 +25,7 @@ export const mockUsers: User[] = [
   {
     id: '2',
     username: 'discrete_guy',
-    avatar_url: null,
+    avatar_url: null, // No avatar - will show initial
     intent: 'discrete',
     availability: 'now',
     is_verified: false,
@@ -35,7 +39,7 @@ export const mockUsers: User[] = [
   {
     id: '3',
     username: 'hosting_tonight',
-    avatar_url: null,
+    avatar_url: getAvatarUrl('HT', 'f97316'),
     intent: 'hosting',
     availability: 'today',
     is_verified: true,
@@ -50,7 +54,7 @@ export const mockUsers: User[] = [
   {
     id: '4',
     username: 'traveler_m',
-    avatar_url: null,
+    avatar_url: getAvatarUrl('TM', '8b5cf6'),
     intent: 'traveling',
     availability: 'later',
     is_verified: true,
@@ -65,7 +69,7 @@ export const mockUsers: User[] = [
   {
     id: '5',
     username: 'anon_user',
-    avatar_url: null,
+    avatar_url: null, // No avatar - will show initial
     intent: 'looking',
     availability: 'now',
     is_verified: false,
