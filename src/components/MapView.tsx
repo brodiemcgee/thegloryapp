@@ -144,8 +144,6 @@ export default function MapView() {
           height: 48px;
           position: relative;
           cursor: pointer;
-          transition: transform 0.15s ease-out;
-          transform-origin: center center;
         `;
 
         // Create the ring/border element
@@ -155,8 +153,8 @@ export default function MapView() {
           inset: 0;
           border-radius: 50%;
           border: 3px solid ${ringColor};
-          ${user.is_online ? `box-shadow: 0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60;` : ''}
-          ${user.is_online ? 'animation: markerPulse 2s infinite;' : ''}
+          box-shadow: ${user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none'};
+          transition: box-shadow 0.15s ease-out;
           pointer-events: none;
         `;
 
@@ -223,11 +221,11 @@ export default function MapView() {
         }
 
         el.addEventListener('mouseenter', () => {
-          el.style.transform = 'scale(1.1)';
+          ring.style.boxShadow = `0 0 0 4px ${ringColor}50, 0 0 16px ${ringColor}70`;
         });
 
         el.addEventListener('mouseleave', () => {
-          el.style.transform = 'scale(1)';
+          ring.style.boxShadow = user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none';
         });
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
@@ -253,22 +251,34 @@ export default function MapView() {
       const el = document.createElement('div');
       el.className = 'location-marker';
       el.style.cssText = `
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      `;
+
+      const inner = document.createElement('div');
+      inner.style.cssText = `
         width: 24px;
         height: 24px;
         background: #3b82f6;
         border: 2px solid #ffffff;
         border-radius: 4px;
-        cursor: pointer;
-        transition: transform 0.15s ease-out;
-        transform-origin: center center;
+        transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
       `;
 
+      el.appendChild(inner);
+
       el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.15)';
+        inner.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
+        inner.style.borderColor = '#60a5fa';
       });
 
       el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)';
+        inner.style.boxShadow = 'none';
+        inner.style.borderColor = '#ffffff';
       });
 
       el.addEventListener('click', () => {
