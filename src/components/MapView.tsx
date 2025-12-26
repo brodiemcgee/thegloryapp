@@ -33,13 +33,14 @@ export default function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
+  const userMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const locationMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<'users' | 'heatmap'>('users');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [intentFilter, setIntentFilter] = useState<Intent | 'all'>('all');
-  const [userMarkers, setUserMarkers] = useState<mapboxgl.Marker[]>([]);
-  const [locationMarkers, setLocationMarkers] = useState<mapboxgl.Marker[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const { position, loading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
@@ -85,7 +86,7 @@ export default function MapView() {
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    map.current = new mapboxgl.Map({
+    const mapInstance = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: position ? [position.lng, position.lat] : defaultCenter,
@@ -93,14 +94,21 @@ export default function MapView() {
       attributionControl: false,
     });
 
+    mapInstance.on('load', () => {
+      setMapLoaded(true);
+    });
+
+    map.current = mapInstance;
+
     return () => {
       // Clean up markers
-      userMarkers.forEach((marker) => marker.remove());
-      locationMarkers.forEach((marker) => marker.remove());
+      userMarkersRef.current.forEach((marker) => marker.remove());
+      locationMarkersRef.current.forEach((marker) => marker.remove());
       map.current?.remove();
       map.current = null;
+      setMapLoaded(false);
     };
-  }, [position]);
+  }, []);
 
   // Get ring color based on user intent
   const getIntentColor = (intent: Intent): string => {
@@ -115,15 +123,13 @@ export default function MapView() {
 
   // Update user markers based on view mode and filtered users
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
 
     // Remove existing user markers
-    userMarkers.forEach((marker) => marker.remove());
+    userMarkersRef.current.forEach((marker) => marker.remove());
+    userMarkersRef.current = [];
 
     if (viewMode === 'users') {
-      // Add user markers for filtered users
-      const newMarkers: mapboxgl.Marker[] = [];
-
       filteredUsers.forEach((user) => {
         if (!user.location || !map.current) return;
 
@@ -138,7 +144,8 @@ export default function MapView() {
           height: 48px;
           position: relative;
           cursor: pointer;
-          transition: transform 0.2s;
+          transition: transform 0.15s ease-out;
+          transform-origin: center center;
         `;
 
         // Create the ring/border element
@@ -150,6 +157,7 @@ export default function MapView() {
           border: 3px solid ${ringColor};
           ${user.is_online ? `box-shadow: 0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60;` : ''}
           ${user.is_online ? 'animation: markerPulse 2s infinite;' : ''}
+          pointer-events: none;
         `;
 
         // Create the inner circle with photo or initial
@@ -166,11 +174,15 @@ export default function MapView() {
           font-size: 16px;
           color: white;
           overflow: hidden;
+          pointer-events: none;
         `;
 
         if (!hasAvatar) {
           inner.textContent = initial;
         }
+
+        el.appendChild(ring);
+        el.appendChild(inner);
 
         // Add verified badge if verified
         if (user.is_verified) {
@@ -187,6 +199,7 @@ export default function MapView() {
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
           `;
           badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" fill="none"/></svg>`;
           el.appendChild(badge);
@@ -204,40 +217,35 @@ export default function MapView() {
             background: #22c55e;
             border: 2px solid #0a0a0a;
             border-radius: 50%;
+            pointer-events: none;
           `;
           el.appendChild(onlineDot);
         }
 
-        el.appendChild(ring);
-        el.appendChild(inner);
-
         el.addEventListener('mouseenter', () => {
-          el.style.transform = 'scale(1.15)';
+          el.style.transform = 'scale(1.1)';
         });
 
         el.addEventListener('mouseleave', () => {
           el.style.transform = 'scale(1)';
         });
 
-        const marker = new mapboxgl.Marker(el)
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([user.location.lng, user.location.lat])
           .addTo(map.current!);
 
-        newMarkers.push(marker);
+        userMarkersRef.current.push(marker);
       });
-
-      setUserMarkers(newMarkers);
     }
-  }, [viewMode, filteredUsers, map.current]);
+  }, [viewMode, filteredUsers, mapLoaded]);
 
   // Update location markers
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
 
     // Remove existing location markers
-    locationMarkers.forEach((marker) => marker.remove());
-
-    const newMarkers: mapboxgl.Marker[] = [];
+    locationMarkersRef.current.forEach((marker) => marker.remove());
+    locationMarkersRef.current = [];
 
     mockLocations.forEach((location) => {
       if (!map.current) return;
@@ -251,11 +259,12 @@ export default function MapView() {
         border: 2px solid #ffffff;
         border-radius: 4px;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: transform 0.15s ease-out;
+        transform-origin: center center;
       `;
 
       el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.2)';
+        el.style.transform = 'scale(1.15)';
       });
 
       el.addEventListener('mouseleave', () => {
@@ -266,19 +275,17 @@ export default function MapView() {
         setSelectedLocation(location);
       });
 
-      const marker = new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat([location.lng, location.lat])
         .addTo(map.current!);
 
-      newMarkers.push(marker);
+      locationMarkersRef.current.push(marker);
     });
-
-    setLocationMarkers(newMarkers);
-  }, [map.current]);
+  }, [mapLoaded]);
 
   // Add/update user location marker
   useEffect(() => {
-    if (!map.current || !position) return;
+    if (!map.current || !position || !mapLoaded) return;
 
     // Remove existing marker
     if (userLocationMarker.current) {
@@ -300,10 +307,10 @@ export default function MapView() {
       "></div>
     `;
 
-    userLocationMarker.current = new mapboxgl.Marker(el)
+    userLocationMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
       .setLngLat([position.lng, position.lat])
       .addTo(map.current);
-  }, [position, map.current]);
+  }, [position, mapLoaded]);
 
   const handleFindMyLocation = async () => {
     setIsLocating(true);
