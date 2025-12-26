@@ -10,6 +10,7 @@ import BlockConfirmModal from './BlockConfirmModal';
 import { useBlock } from '@/hooks/useBlock';
 import { useReport } from '@/hooks/useReport';
 import { useProfileViews } from '@/hooks/useProfileViews';
+import { useUserInteraction } from '@/hooks/useUserInteraction';
 
 interface UserProfileProps {
   user: User;
@@ -72,10 +73,27 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [notesText, setNotesText] = useState('');
   const { blockUser, isBlocked } = useBlock();
   const { submitReport } = useReport();
   const { logView } = useProfileViews();
+  const {
+    isFavorite,
+    notes,
+    hasMet,
+    rating,
+    toggleFavorite,
+    updateNotes,
+    toggleMet,
+    setRating,
+  } = useUserInteraction(user.id);
+
+  // Sync notes text with stored notes
+  useEffect(() => {
+    setNotesText(notes);
+  }, [notes]);
 
   // Log profile view when component mounts
   useEffect(() => {
@@ -162,6 +180,34 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
           <ChevronLeftIcon className="w-5 h-5" />
         </button>
         <h1 className="text-lg font-semibold flex-1">Profile</h1>
+
+        {/* Favorite button */}
+        <button
+          onClick={toggleFavorite}
+          className={`p-2 rounded-lg transition-colors ${
+            isFavorite ? 'text-red-500' : 'hover:bg-hole-surface text-hole-muted'
+          }`}
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <svg className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+
+        {/* Notes button - only show when favorited */}
+        {isFavorite && (
+          <button
+            onClick={() => setShowNotesModal(true)}
+            className={`p-2 rounded-lg transition-colors ${
+              notes ? 'text-yellow-500' : 'hover:bg-hole-surface text-hole-muted'
+            }`}
+            aria-label="View notes"
+          >
+            <svg className="w-5 h-5" fill={notes ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        )}
 
         {/* Menu button */}
         <div className="relative">
@@ -291,6 +337,63 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
             <span className="px-3 py-1 bg-hole-surface rounded-full text-sm">
               {availabilityLabels[user.availability]}
             </span>
+          </div>
+
+          {/* Your Interaction Section */}
+          <div className="bg-hole-surface rounded-lg p-4 space-y-4">
+            <h3 className="text-sm text-hole-muted font-medium">Your Notes</h3>
+
+            {/* Met toggle and Rating row */}
+            <div className="flex items-center justify-between">
+              {/* Met toggle */}
+              <button
+                onClick={toggleMet}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  hasMet
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : 'bg-hole-border text-hole-muted hover:bg-hole-muted'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {hasMet ? 'Met' : 'Mark as Met'}
+              </button>
+
+              {/* Star Rating */}
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(rating === star ? null : star)}
+                    className="p-1 transition-colors"
+                    aria-label={`Rate ${star} stars`}
+                  >
+                    <svg
+                      className={`w-6 h-6 ${
+                        rating && star <= rating ? 'text-yellow-400' : 'text-hole-muted'
+                      }`}
+                      fill={rating && star <= rating ? 'currentColor' : 'none'}
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes preview */}
+            {notes && (
+              <button
+                onClick={() => setShowNotesModal(true)}
+                className="w-full text-left p-3 bg-hole-border rounded-lg text-sm text-gray-300 hover:bg-hole-muted transition-colors"
+              >
+                <span className="line-clamp-2">{notes}</span>
+              </button>
+            )}
           </div>
 
           {/* Bio */}
@@ -476,6 +579,59 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
           onConfirm={handleBlock}
           onClose={() => setShowBlockModal(false)}
         />
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowNotesModal(false)}
+          />
+          <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Notes about {user.username}</h2>
+              <button
+                onClick={() => setShowNotesModal(false)}
+                className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder="Write private notes about this person..."
+              className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent transition-colors resize-none"
+              rows={6}
+            />
+
+            <p className="text-xs text-hole-muted">
+              These notes are private and only visible to you.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNotesModal(false)}
+                className="flex-1 py-3 bg-hole-surface border border-hole-border rounded-lg font-medium hover:bg-hole-border transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateNotes(notesText);
+                  setShowNotesModal(false);
+                }}
+                className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
