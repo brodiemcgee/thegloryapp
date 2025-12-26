@@ -9,6 +9,7 @@ import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon } from './icons'
 import { Intent, Availability } from '@/types';
 import BlockedUsersScreen from './BlockedUsersScreen';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
+import ProfileDetailsEditor from './ProfileDetailsEditor';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useProfileViews } from '@/hooks/useProfileViews';
@@ -16,6 +17,7 @@ import { useGhostMode } from '@/hooks/useGhostMode';
 import SubscriptionModal from './SubscriptionModal';
 import ProfileViewersScreen from './ProfileViewersScreen';
 import PaywallModal from './PaywallModal';
+import { User } from '@/types';
 
 export default function ProfileView() {
   const { settings, toggleSfwMode, toggleLocation, updateSettings } = useSettings();
@@ -30,6 +32,7 @@ export default function ProfileView() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showProfileViewers, setShowProfileViewers] = useState(false);
   const [showPaywall, setShowPaywall] = useState<string | null>(null);
+  const [showDetailsEditor, setShowDetailsEditor] = useState(false);
 
   const intentOptions: { value: Intent; label: string }[] = [
     { value: 'looking_now', label: 'Looking Now' },
@@ -56,6 +59,21 @@ export default function ProfileView() {
       setShowPaywall('ghost_mode');
     }
   };
+
+  const handleProfileDetailsUpdate = (updates: Partial<User>) => {
+    setUser({ ...user, ...updates });
+    // TODO: Save to Supabase
+  };
+
+  if (showDetailsEditor) {
+    return (
+      <ProfileDetailsEditor
+        user={user}
+        onSave={handleProfileDetailsUpdate}
+        onBack={() => setShowDetailsEditor(false)}
+      />
+    );
+  }
 
   if (showBlockedUsers) {
     return <BlockedUsersScreen onBack={() => setShowBlockedUsers(false)} />;
@@ -265,6 +283,27 @@ export default function ProfileView() {
               rows={3}
             />
           </div>
+
+          {/* Profile Details Button */}
+          <button
+            onClick={() => setShowDetailsEditor(true)}
+            className="w-full flex items-center justify-between p-4 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+          >
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <div className="text-left">
+                <div className="font-medium">Profile Details</div>
+                <div className="text-sm text-hole-muted">
+                  Stats, preferences, kinks, socials
+                </div>
+              </div>
+            </div>
+            <svg className="w-5 h-5 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
           {/* Subscription status */}
           {isPremium ? (
