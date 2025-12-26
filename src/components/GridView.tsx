@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { mockUsers } from '@/data/mockData';
+import { mockUsers, currentUser } from '@/data/mockData';
 import { User, Intent } from '@/types';
 import { FilterIcon, GridIcon, CheckIcon } from './icons';
 import UserCard from './UserCard';
@@ -61,7 +61,8 @@ export default function GridView() {
       result.sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime());
     }
 
-    return result;
+    // Always show current user first
+    return [{ ...currentUser, distance_km: 0 }, ...result];
   }, [intentFilter, verifiedOnly, sortBy, position]);
 
   const intentOptions: { value: FilterOption; label: string }[] = [
