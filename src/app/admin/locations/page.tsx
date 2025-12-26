@@ -15,6 +15,7 @@ import {
   Flag,
   Edit,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from '@/hooks/admin/useAdminAuth';
@@ -47,6 +48,22 @@ const typeColors: Record<string, string> = {
   venue: 'bg-green-100 text-green-700',
 };
 
+interface NewLocation {
+  name: string;
+  description: string;
+  type: 'public' | 'private' | 'cruising' | 'venue';
+  lat: string;
+  lng: string;
+}
+
+const defaultNewLocation: NewLocation = {
+  name: '',
+  description: '',
+  type: 'public',
+  lat: '',
+  lng: '',
+};
+
 export default function LocationsPage() {
   const { adminRoleId } = useAdminAuth();
   const { logAction } = useAuditLog();
@@ -57,6 +74,9 @@ export default function LocationsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newLocation, setNewLocation] = useState<NewLocation>(defaultNewLocation);
+  const [isCreating, setIsCreating] = useState(false);
 
   const loadLocations = useCallback(async () => {
     try {
@@ -151,6 +171,69 @@ export default function LocationsPage() {
     }
   }
 
+  async function createLocation() {
+    if (!newLocation.name.trim()) {
+      toast.error('Please enter a location name');
+      return;
+    }
+
+    const lat = parseFloat(newLocation.lat);
+    const lng = parseFloat(newLocation.lng);
+
+    if (newLocation.lat && (isNaN(lat) || lat < -90 || lat > 90)) {
+      toast.error('Invalid latitude (must be between -90 and 90)');
+      return;
+    }
+
+    if (newLocation.lng && (isNaN(lng) || lng < -180 || lng > 180)) {
+      toast.error('Invalid longitude (must be between -180 and 180)');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+
+      const locationData: Record<string, unknown> = {
+        name: newLocation.name.trim(),
+        description: newLocation.description.trim() || null,
+        type: newLocation.type,
+        is_verified: true, // Admin-created locations are auto-verified
+        is_active: true,
+      };
+
+      // Add coordinates if provided
+      if (newLocation.lat && newLocation.lng) {
+        locationData.lat = lat;
+        locationData.lng = lng;
+      }
+
+      const { data, error } = await supabase
+        .from('locations')
+        .insert(locationData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await logAction({
+        action: 'create',
+        resourceType: 'location',
+        resourceId: data.id,
+        details: { name: newLocation.name, type: newLocation.type },
+      });
+
+      toast.success('Location created successfully');
+      setShowAddModal(false);
+      setNewLocation(defaultNewLocation);
+      loadLocations();
+    } catch (error) {
+      console.error('Error creating location:', error);
+      toast.error('Failed to create location');
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
   const filteredLocations = locations.filter((loc) => loc.is_active !== false);
 
   return (
@@ -191,6 +274,13 @@ export default function LocationsPage() {
           >
             <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
             Refresh
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4" />
+            Add Location
           </button>
         </div>
       </div>
@@ -453,6 +543,131 @@ export default function LocationsPage() {
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 Remove Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Location Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Add New Location
+              </h2>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewLocation(defaultNewLocation);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                  placeholder="e.g., Central Park Restroom"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={newLocation.description}
+                  onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
+                  placeholder="Brief description of the location..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                />
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type
+                </label>
+                <select
+                  value={newLocation.type}
+                  onChange={(e) => setNewLocation({ ...newLocation, type: e.target.value as NewLocation['type'] })}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                >
+                  <option value="public">Public</option>
+                  <option value="private">Private</option>
+                  <option value="cruising">Cruising</option>
+                  <option value="venue">Venue</option>
+                </select>
+              </div>
+
+              {/* Coordinates */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Coordinates (optional)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      type="text"
+                      value={newLocation.lat}
+                      onChange={(e) => setNewLocation({ ...newLocation, lat: e.target.value })}
+                      placeholder="Latitude (e.g., -33.8688)"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={newLocation.lng}
+                      onChange={(e) => setNewLocation({ ...newLocation, lng: e.target.value })}
+                      placeholder="Longitude (e.g., 151.2093)"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Tip: Right-click on Google Maps and select coordinates to copy them
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewLocation(defaultNewLocation);
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createLocation}
+                disabled={isCreating || !newLocation.name.trim()}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  'Create Location'
+                )}
               </button>
             </div>
           </div>
