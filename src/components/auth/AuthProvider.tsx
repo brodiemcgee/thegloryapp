@@ -100,7 +100,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // Show consent modal if not accepted
   if (!hasConsent) {
-    return <ConsentModal />;
+    return <ConsentModal onAccept={() => setHasConsent(true)} />;
   }
 
   // Show login flow if not authenticated

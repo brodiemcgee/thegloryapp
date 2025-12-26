@@ -2,32 +2,22 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-
 const CONSENT_KEY = 'thehole_consent_accepted';
 
-export default function ConsentModal() {
-  const [isVisible, setIsVisible] = useState(false);
+interface ConsentModalProps {
+  onAccept: () => void;
+}
 
-  useEffect(() => {
-    // Check if consent has been given
-    const hasConsent = localStorage.getItem(CONSENT_KEY);
-    if (!hasConsent) {
-      setIsVisible(true);
-    }
-  }, []);
-
+export default function ConsentModal({ onAccept }: ConsentModalProps) {
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, 'true');
-    setIsVisible(false);
+    onAccept();
   };
 
   const handleDecline = () => {
     // Redirect to a safe page or show a message
     window.location.href = 'https://www.google.com';
   };
-
-  if (!isVisible) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4">
