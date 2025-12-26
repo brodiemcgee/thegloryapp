@@ -41,7 +41,8 @@
       "mcp__supabase__execute_sql",
       "mcp__vercel__get_project",
       "WebSearch",
-      "mcp__supabase__list_migrations"
+      "mcp__supabase__list_migrations",
+      "Bash(git checkout:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

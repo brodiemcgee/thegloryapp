@@ -5,13 +5,18 @@ import { useRouter } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { AdminSidebar } from '@/components/admin/Sidebar';
 import { AdminHeader } from '@/components/admin/Header';
+import { KeyboardShortcutsHelp } from '@/components/admin/KeyboardShortcutsHelp';
 import { useAdminAuth, AdminAuthProvider } from '@/hooks/admin/useAdminAuth';
+import { useGlobalNavShortcuts } from '@/hooks/admin/useKeyboardShortcuts';
 import LoadingScreen from '@/components/LoadingScreen';
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading, adminRole } = useAdminAuth();
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Enable global keyboard shortcuts for navigation
+  useGlobalNavShortcuts();
 
   useEffect(() => {
     if (!isLoading && !isAdmin) {
@@ -65,6 +70,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           },
         }}
       />
+      <KeyboardShortcutsHelp />
     </div>
   );
 }

@@ -36,6 +36,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const checkAdminStatus = useCallback(async (userId: string) => {
     try {
+      console.log('[AdminAuth] Checking admin status for user:', userId);
+
       // Check if user has an admin role
       const { data: adminData, error: adminError } = await supabase
         .from('admin_roles')
@@ -44,7 +46,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         .eq('status', 'active')
         .single();
 
+      console.log('[AdminAuth] Query result:', { adminData, adminError });
+
       if (adminError || !adminData) {
+        console.log('[AdminAuth] No admin role found or error:', adminError?.message);
         setAdminRole(null);
         setAdminRoleId(null);
         setAdminProfile(null);
@@ -91,14 +96,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('[AdminAuth] Getting initial session...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('[AdminAuth] Session:', session ? `User ${session.user.id}` : 'No session');
 
         if (session?.user) {
           setUser(session.user);
           await checkAdminStatus(session.user.id);
+        } else {
+          console.log('[AdminAuth] No session - user not logged in');
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('[AdminAuth] Error getting session:', error);
       } finally {
         setIsLoading(false);
       }
