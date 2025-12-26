@@ -36,6 +36,7 @@ export default function ProfileDetailsEditor({ user, onSave, onBack }: ProfileDe
   const [section, setSection] = useState<EditorSection>('main');
   const [formData, setFormData] = useState({
     // Stats
+    age: user.age || undefined,
     height_cm: user.height_cm || undefined,
     weight_kg: user.weight_kg || undefined,
     body_type: user.body_type || undefined,
@@ -62,6 +63,7 @@ export default function ProfileDetailsEditor({ user, onSave, onBack }: ProfileDe
 
   const handleSave = () => {
     const updates: Partial<User> = {
+      age: formData.age,
       height_cm: formData.height_cm,
       weight_kg: formData.weight_kg,
       body_type: formData.body_type,
@@ -143,7 +145,7 @@ export default function ProfileDetailsEditor({ user, onSave, onBack }: ProfileDe
         <div className="flex-1 overflow-auto p-4 space-y-2">
           <MenuButton
             label="Stats"
-            description="Height, weight, body type"
+            description="Age, height, weight, body type"
             onClick={() => setSection('stats')}
           />
           <MenuButton
@@ -192,6 +194,20 @@ export default function ProfileDetailsEditor({ user, onSave, onBack }: ProfileDe
         </div>
 
         <div className="flex-1 overflow-auto p-4 space-y-6">
+          {/* Age */}
+          <div>
+            <label className="text-sm text-hole-muted mb-2 block">Age</label>
+            <input
+              type="number"
+              value={formData.age || ''}
+              onChange={(e) => setFormData({ ...formData, age: e.target.value ? parseInt(e.target.value) : undefined })}
+              placeholder="25"
+              className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
+              min={18}
+              max={99}
+            />
+          </div>
+
           {/* Height */}
           <div>
             <label className="text-sm text-hole-muted mb-2 block">Height (cm)</label>
