@@ -47,7 +47,10 @@
       "Bash(GIT_TERMINAL_PROMPT=0 git push:*)",
       "WebFetch(domain:www.hookbook.app)",
       "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
-      "mcp__supabase__deploy_edge_function"
+      "mcp__supabase__deploy_edge_function",
+      "Bash(npx web-push:*)",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__get_edge_function"
     ]
   },
   "enableAllProjectMcpServers": true,

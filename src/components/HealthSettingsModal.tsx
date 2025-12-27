@@ -161,12 +161,23 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
                 <label className="text-sm text-hole-muted mb-2 block">
                   Reminder time
                 </label>
-                <input
-                  type="time"
+                <select
                   value={prepReminderTime}
                   onChange={(e) => setPrepReminderTime(e.target.value)}
                   className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
-                />
+                >
+                  {Array.from({ length: 24 * 4 }, (_, i) => {
+                    const hour = Math.floor(i / 4);
+                    const minute = (i % 4) * 15;
+                    const value = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const label = `${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}:${minute.toString().padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+                    return (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
 
               {/* Push notification requirement */}
