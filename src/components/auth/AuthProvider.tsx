@@ -27,12 +27,34 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [authValue, setAuthValue] = useState('');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [capturedReferralCode, setCapturedReferralCode] = useState<string | null>(null);
 
   // Check consent on mount
   useEffect(() => {
     const consent = localStorage.getItem('thehole_consent_accepted');
     setHasConsent(!!consent);
     setCheckingConsent(false);
+  }, []);
+
+  // Capture referral code from URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get('ref');
+      if (refCode) {
+        setCapturedReferralCode(refCode.toUpperCase());
+        // Store in sessionStorage for persistence across auth flow
+        sessionStorage.setItem('referral_code', refCode.toUpperCase());
+        // Clean up URL without reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete('ref');
+        window.history.replaceState({}, '', url.toString());
+      } else {
+        // Check sessionStorage for previously captured code
+        const stored = sessionStorage.getItem('referral_code');
+        if (stored) setCapturedReferralCode(stored);
+      }
+    }
   }, []);
 
   // Fetch profile when user is authenticated
@@ -130,7 +152,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // Show onboarding if profile is incomplete
   if (authStep === 'onboarding') {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+    return (
+      <OnboardingScreen
+        onComplete={handleOnboardingComplete}
+        referralCode={capturedReferralCode}
+      />
+    );
   }
 
   // User is authenticated and onboarded - show app

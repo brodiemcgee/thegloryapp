@@ -5,9 +5,10 @@
 import { useState, useEffect } from 'react';
 import { currentUser } from '@/data/mockData';
 import { useSettings } from '@/hooks/useSettings';
-import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon } from './icons';
+import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon } from './icons';
 import { Intent, Availability } from '@/types';
 import BlockedUsersScreen from './BlockedUsersScreen';
+import ReferralProgramScreen from './ReferralProgramScreen';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import ProfileDetailsEditor from './ProfileDetailsEditor';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +30,7 @@ export default function ProfileView() {
   const [user, setUser] = useState(currentUser);
   const [showSettings, setShowSettings] = useState(false);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
+  const [showReferralProgram, setShowReferralProgram] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showProfileViewers, setShowProfileViewers] = useState(false);
@@ -168,6 +170,10 @@ export default function ProfileView() {
     return <BlockedUsersScreen onBack={() => setShowBlockedUsers(false)} />;
   }
 
+  if (showReferralProgram) {
+    return <ReferralProgramScreen onClose={() => setShowReferralProgram(false)} />;
+  }
+
   if (showProfileViewers) {
     return (
       <ProfileViewersScreen
@@ -291,6 +297,23 @@ export default function ProfileView() {
             <div className="flex items-center gap-3">
               <BlockIcon className="w-5 h-5" />
               <span className="font-medium">Blocked Users</span>
+            </div>
+            <svg className="w-5 h-5 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Referral Program */}
+          <button
+            onClick={() => setShowReferralProgram(true)}
+            className="w-full flex items-center justify-between p-4 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+          >
+            <div className="flex items-center gap-3">
+              <GiftIcon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Referral Program</div>
+                <div className="text-sm text-hole-muted">Earn credits for referrals</div>
+              </div>
             </div>
             <svg className="w-5 h-5 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

@@ -8,9 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
+  referralCode?: string | null;
 }
 
-export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+export default function OnboardingScreen({ onComplete, referralCode }: OnboardingScreenProps) {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -65,6 +66,35 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       if (upsertError) {
         setError(upsertError.message);
       } else {
+        // Process referral code if provided
+        if (referralCode) {
+          try {
+            // Validate referral code and get referrer
+            const { data: codeData } = await supabase
+              .from('referral_codes')
+              .select('user_id')
+              .eq('code', referralCode.toUpperCase())
+              .single();
+
+            // Only create referral if code is valid and not self-referral
+            if (codeData && codeData.user_id !== user.id) {
+              await supabase.from('referrals').insert({
+                referrer_id: codeData.user_id,
+                referred_id: user.id,
+                referral_code_used: referralCode.toUpperCase(),
+              });
+            }
+          } catch {
+            // Referral failed silently - don't block onboarding
+            console.log('Referral tracking failed (code may be invalid)');
+          }
+
+          // Clear stored referral code
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('referral_code');
+          }
+        }
+
         onComplete();
       }
     } catch (err) {

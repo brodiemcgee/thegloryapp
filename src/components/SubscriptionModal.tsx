@@ -2,9 +2,16 @@
 
 'use client';
 
-import { XIcon, CheckIcon, CrownIcon } from './icons';
+import { XIcon, CheckIcon, CrownIcon, GiftIcon } from './icons';
 import { useSubscription } from '@/hooks/useSubscription';
 import type { SubscriptionTier } from '@/contexts/SubscriptionContext';
+
+// Prices in cents
+const PLAN_PRICES: Record<SubscriptionTier, number> = {
+  free: 0,
+  premium: 499,  // $4.99
+  premium_plus: 999,  // $9.99
+};
 
 interface SubscriptionModalProps {
   onClose: () => void;
@@ -33,8 +40,8 @@ const PLANS: Plan[] = [
     priceDetail: 'Forever',
     features: [
       { text: 'Basic profile', included: true },
-      { text: 'Limited messages (10/day)', included: true },
-      { text: 'See nearby users', included: true },
+      { text: '100 messages per day', included: true },
+      { text: 'Chat with 20 nearby profiles', included: true },
       { text: 'Ghost mode', included: false },
       { text: 'See who viewed you', included: false },
       { text: 'Read receipts', included: false },
@@ -43,28 +50,28 @@ const PLANS: Plan[] = [
   {
     tier: 'premium',
     name: 'Premium',
-    price: '$9.99',
+    price: '$4.99',
     priceDetail: 'per month',
     popular: true,
     priceId: 'price_premium_monthly', // Mock Stripe price ID
     features: [
       { text: 'Everything in Free', included: true },
       { text: 'Unlimited messages', included: true },
+      { text: 'Chat with 150 nearby profiles', included: true },
       { text: 'Ghost mode', included: true },
       { text: 'See who viewed you', included: true },
       { text: 'Read receipts', included: true },
-      { text: 'Priority placement', included: false },
     ],
   },
   {
     tier: 'premium_plus',
     name: 'Premium+',
-    price: '$19.99',
+    price: '$9.99',
     priceDetail: 'per month',
     priceId: 'price_premium_plus_monthly', // Mock Stripe price ID
     features: [
       { text: 'Everything in Premium', included: true },
-      { text: 'Priority placement in grid', included: true },
+      { text: 'Chat with 500 nearby profiles', included: true },
       { text: 'Advanced filters', included: true },
       { text: 'Featured profile badge', included: true },
       { text: 'Unlimited photo uploads', included: true },
@@ -74,7 +81,21 @@ const PLANS: Plan[] = [
 ];
 
 export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
-  const { subscription, subscribe, cancelSubscription } = useSubscription();
+  const { subscription, subscribe, cancelSubscription, creditBalance, creditBalanceFormatted } = useSubscription();
+
+  // Calculate price after credits
+  const calculateFinalPrice = (tier: SubscriptionTier): { original: number; final: number; creditApplied: number } => {
+    const original = PLAN_PRICES[tier];
+    if (original === 0) return { original: 0, final: 0, creditApplied: 0 };
+
+    const creditApplied = Math.min(creditBalance, original);
+    const final = original - creditApplied;
+    return { original, final, creditApplied };
+  };
+
+  const formatPrice = (cents: number): string => {
+    return `$${(cents / 100).toFixed(2)}`;
+  };
 
   const handleSubscribe = async (tier: SubscriptionTier, priceId?: string) => {
     if (tier === 'free') {
@@ -103,6 +124,25 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
             <XIcon className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Credit Balance Banner */}
+        {creditBalance > 0 && (
+          <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-green-900/30 to-green-800/30 border border-green-500/30 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <GiftIcon className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">
+                  You have {creditBalanceFormatted} in referral credits!
+                </p>
+                <p className="text-sm text-green-400/80">
+                  Credits will be applied to your next payment
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Plans */}
         <div className="p-6">
@@ -138,10 +178,33 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
                     <CrownIcon className="w-8 h-8 mx-auto mb-2 text-purple-500" />
                   )}
                   <h3 className="text-lg font-semibold mb-1">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-sm text-hole-muted">{plan.priceDetail}</span>
-                  </div>
+                  {(() => {
+                    const pricing = calculateFinalPrice(plan.tier);
+                    const hasCredit = pricing.creditApplied > 0;
+
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex items-baseline justify-center gap-1">
+                          {hasCredit ? (
+                            <>
+                              <span className="text-xl text-hole-muted line-through">{plan.price}</span>
+                              <span className="text-3xl font-bold text-green-400">
+                                {pricing.final === 0 ? 'FREE' : formatPrice(pricing.final)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-3xl font-bold">{plan.price}</span>
+                          )}
+                          <span className="text-sm text-hole-muted">{plan.priceDetail}</span>
+                        </div>
+                        {hasCredit && (
+                          <div className="text-xs text-green-400">
+                            Credit applied: -{formatPrice(pricing.creditApplied)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Features */}

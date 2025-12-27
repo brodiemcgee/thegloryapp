@@ -184,7 +184,7 @@ export default function MapView() {
     }
 
     return result;
-  }, [filters, dbUsers, favorites]); // Note: position is NOT a dependency - markers don't move with GPS
+  }, [filters, dbUsers, favorites]);
 
   // Create a marker element for a user (extracted function for reuse)
   // Uses simple CSS without position/z-index on container to avoid Mapbox conflicts

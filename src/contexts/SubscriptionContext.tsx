@@ -2,7 +2,9 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 export type SubscriptionTier = 'free' | 'premium' | 'premium_plus';
 
@@ -10,7 +12,7 @@ export type SubscriptionFeature =
   | 'ghost_mode'
   | 'who_viewed_me'
   | 'unlimited_messages'
-  | 'priority_placement'
+  | 'extended_reach'
   | 'read_receipts'
   | 'advanced_filters';
 
@@ -26,31 +28,73 @@ interface SubscriptionContextValue {
   canAccess: (feature: SubscriptionFeature) => boolean;
   subscribe: (tier: SubscriptionTier) => Promise<void>;
   cancelSubscription: () => Promise<void>;
+  // Credit balance
+  creditBalance: number;  // in cents
+  creditBalanceFormatted: string;  // "$4.99"
+  refreshCreditBalance: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
 
 const FEATURE_ACCESS: Record<SubscriptionTier, SubscriptionFeature[]> = {
   free: [],
-  premium: ['ghost_mode', 'who_viewed_me', 'unlimited_messages', 'read_receipts'],
+  premium: ['ghost_mode', 'who_viewed_me', 'unlimited_messages', 'read_receipts', 'extended_reach'],
   premium_plus: [
     'ghost_mode',
     'who_viewed_me',
     'unlimited_messages',
-    'priority_placement',
+    'extended_reach',
     'read_receipts',
     'advanced_filters',
   ],
 };
 
+// Profile reach limits per tier (how many nearby profiles you can chat with)
+export const PROFILE_LIMITS: Record<SubscriptionTier, number> = {
+  free: 20,
+  premium: 150,
+  premium_plus: 500,
+};
+
+// Daily message limits per tier
+export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
+  free: 100,
+  premium: null, // unlimited
+  premium_plus: null, // unlimited
+};
+
 const STORAGE_KEY = 'thehole_subscription';
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionState>({
     tier: 'free',
     expiresAt: null,
     isActive: false,
   });
+  const [creditBalance, setCreditBalance] = useState(0);
+
+  // Fetch credit balance from Supabase
+  const refreshCreditBalance = useCallback(async () => {
+    if (!user) {
+      setCreditBalance(0);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('get_credit_balance', { p_user_id: user.id });
+      if (!error && data !== null) {
+        setCreditBalance(data);
+      }
+    } catch (err) {
+      console.error('Error fetching credit balance:', err);
+    }
+  }, [user]);
+
+  // Fetch credit balance when user changes
+  useEffect(() => {
+    refreshCreditBalance();
+  }, [refreshCreditBalance]);
 
   // Load subscription from localStorage
   useEffect(() => {
@@ -110,12 +154,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const creditBalanceFormatted = `$${(creditBalance / 100).toFixed(2)}`;
+
   const value: SubscriptionContextValue = {
     subscription,
     isPremium,
     canAccess,
     subscribe,
     cancelSubscription,
+    creditBalance,
+    creditBalanceFormatted,
+    refreshCreditBalance,
   };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
