@@ -62,7 +62,7 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium truncate">{user.username}</span>
+            <span className="font-medium truncate">{user.display_name || user.username}</span>
             {user.is_verified && <CheckIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />}
           </div>
           <div className="flex items-center gap-2 text-sm text-hole-muted">
@@ -112,7 +112,7 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
         <div className="flex items-end justify-between gap-1">
           <div className="min-w-0 flex-1">
             <span className="font-semibold text-sm text-white truncate block drop-shadow-md">
-              {user.username}
+              {user.display_name || user.username}
             </span>
             {user.age && (
               <span className="text-xs text-white/80 drop-shadow-md">{user.age}</span>

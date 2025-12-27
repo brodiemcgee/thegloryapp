@@ -4,13 +4,15 @@
 
 import { useState, useEffect } from 'react';
 import { User, Position, BodyType, HostTravel, SmokingStatus, DrugStatus, SaferSex, HivStatus } from '@/types';
-import { ChevronLeftIcon, CheckIcon, MessageIcon, DotsVerticalIcon, FlagIcon, BlockIcon } from './icons';
+import { ChevronLeftIcon, CheckIcon, MessageIcon, DotsVerticalIcon, FlagIcon, BlockIcon, CrownIcon, LockIcon } from './icons';
 import ReportModal from './ReportModal';
 import BlockConfirmModal from './BlockConfirmModal';
+import SubscriptionModal from './SubscriptionModal';
 import { useBlock } from '@/hooks/useBlock';
 import { useReport } from '@/hooks/useReport';
 import { useProfileViews } from '@/hooks/useProfileViews';
 import { useUserInteraction } from '@/hooks/useUserInteraction';
+import { useUnlockedProfiles } from '@/hooks/useUnlockedProfiles';
 import EncounterFormModal from './EncounterFormModal';
 
 interface UserProfileProps {
@@ -75,6 +77,8 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showProfileLimitModal, setShowProfileLimitModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [notesText, setNotesText] = useState('');
   const { blockUser, isBlocked } = useBlock();
@@ -89,8 +93,37 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
     updateNotes,
     addEncounter,
   } = useUserInteraction(user.id);
+  const {
+    isUnlocked,
+    canMessageUser,
+    unlockProfile,
+    unlockedCount,
+    profileLimit,
+    remainingSlots,
+    tier,
+  } = useUnlockedProfiles();
 
   const [showEncounterModal, setShowEncounterModal] = useState(false);
+
+  // Check if this profile is already unlocked for messaging
+  const profileUnlocked = isUnlocked(user.id);
+  const messageStatus = canMessageUser(user.id);
+
+  // Handle send message click
+  const handleSendMessage = () => {
+    if (messageStatus.allowed) {
+      // Unlock the profile if not already unlocked
+      if (!profileUnlocked) {
+        unlockProfile(user.id);
+      }
+      // TODO: Navigate to messages with this user
+      // For now, just show a console log
+      console.log('Starting conversation with', user.username);
+    } else {
+      // Show the upgrade modal
+      setShowProfileLimitModal(true);
+    }
+  };
 
   // Sync notes text with stored notes
   useEffect(() => {
@@ -318,7 +351,7 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
         <div className="p-4 space-y-5">
           {/* Name and verified */}
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold">{user.username}</h2>
+            <h2 className="text-2xl font-bold">{user.display_name || user.username}</h2>
             {user.is_verified && (
               <div className="flex items-center gap-1 text-blue-500" title={user.verified_at ? `Verified ${new Date(user.verified_at).toLocaleDateString()}` : 'Verified'}>
                 <CheckIcon className="w-5 h-5" />
@@ -579,10 +612,31 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
 
       {/* Action bar */}
       <div className="p-4 border-t border-hole-border safe-bottom">
-        <button className="w-full flex items-center justify-center gap-2 py-3 bg-hole-accent text-white rounded-lg font-medium transition-colors hover:bg-hole-accent-hover">
-          <MessageIcon className="w-5 h-5" />
-          Send Message
+        <button
+          onClick={handleSendMessage}
+          className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-colors ${
+            messageStatus.allowed
+              ? 'bg-hole-accent text-white hover:bg-hole-accent-hover'
+              : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:scale-[1.02]'
+          }`}
+        >
+          {messageStatus.allowed ? (
+            <>
+              <MessageIcon className="w-5 h-5" />
+              Send Message
+            </>
+          ) : (
+            <>
+              <LockIcon className="w-5 h-5" />
+              Unlock to Message
+            </>
+          )}
         </button>
+        {!messageStatus.allowed && (
+          <p className="text-center text-xs text-hole-muted mt-2">
+            You&apos;ve reached your {profileLimit} profile limit
+          </p>
+        )}
       </div>
 
       {/* Modals */}
@@ -665,6 +719,86 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
           username={user.username}
           previousEncounterCount={encounters?.length || 0}
         />
+      )}
+
+      {/* Profile Limit Paywall Modal */}
+      {showProfileLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowProfileLimitModal(false)}
+          />
+          <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-xl overflow-hidden">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-center">
+              <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-3">
+                <CrownIcon className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Unlock More Profiles</h2>
+              <p className="text-white/80 text-sm mt-1">
+                Chat with more people nearby
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="text-center">
+                <p className="text-hole-muted">
+                  You&apos;ve used all <span className="text-white font-medium">{profileLimit}</span> profile slots
+                  on your {tier === 'free' ? 'Free' : tier === 'premium' ? 'Premium' : 'Premium+'} plan.
+                </p>
+              </div>
+
+              {/* Upgrade options */}
+              <div className="space-y-3">
+                {tier === 'free' && (
+                  <div className="p-4 bg-hole-surface border border-hole-border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Premium</span>
+                      <span className="text-purple-400 font-bold">150 profiles</span>
+                    </div>
+                    <p className="text-sm text-hole-muted">
+                      7.5x more profiles + ghost mode, read receipts
+                    </p>
+                  </div>
+                )}
+                <div className="p-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">Premium+</span>
+                    <span className="text-pink-400 font-bold">500 profiles</span>
+                  </div>
+                  <p className="text-sm text-hole-muted">
+                    {tier === 'free' ? '25x more profiles' : '3x more profiles'} + all premium features
+                  </p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowProfileLimitModal(false)}
+                  className="flex-1 py-3 bg-hole-surface border border-hole-border rounded-lg font-medium hover:bg-hole-border transition-colors"
+                >
+                  Maybe Later
+                </button>
+                <button
+                  onClick={() => {
+                    setShowProfileLimitModal(false);
+                    setShowSubscriptionModal(true);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:scale-[1.02] transition-transform"
+                >
+                  Upgrade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Modal */}
+      {showSubscriptionModal && (
+        <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
       )}
     </div>
   );
