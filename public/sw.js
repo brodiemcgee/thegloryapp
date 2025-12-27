@@ -1,4 +1,5 @@
 // Service Worker for push notifications
+// Version 2 - adds click-to-navigate
 
 self.addEventListener('push', function(event) {
   if (!event.data) return;
@@ -31,21 +32,9 @@ self.addEventListener('notificationclick', function(event) {
   const urlPath = event.notification.data?.url || '/';
   const fullUrl = new URL(urlPath, self.location.origin).href;
 
+  // On iOS, always open the URL directly - client.navigate() doesn't work reliably
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // If app is already open, navigate it to the target URL
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // Navigate to the target URL and focus
-          client.navigate(fullUrl);
-          return client.focus();
-        }
-      }
-      // Otherwise open new window at the target URL
-      if (clients.openWindow) {
-        return clients.openWindow(fullUrl);
-      }
-    })
+    clients.openWindow(fullUrl)
   );
 });
 
