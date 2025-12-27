@@ -45,6 +45,7 @@ const ONLINE_OPTIONS: { value: 'all' | 'online' | 'recent'; label: string }[] = 
 
 const MIN_AGE = 18;
 const MAX_AGE = 70;
+const MIN_AGE_RANGE = 5; // Minimum span between min and max age
 
 export default function FilterBar({ filters, onChange, showFavorites = true }: FilterBarProps) {
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
@@ -217,14 +218,16 @@ export default function FilterBar({ filters, onChange, showFavorites = true }: F
                       <input
                         type="range"
                         min={MIN_AGE}
-                        max={MAX_AGE}
+                        max={MAX_AGE - MIN_AGE_RANGE}
                         value={filters.ageRange?.[0] ?? MIN_AGE}
                         onChange={(e) => {
                           const minVal = Number(e.target.value);
-                          const maxVal = filters.ageRange?.[1] ?? MAX_AGE;
+                          const currentMax = filters.ageRange?.[1] ?? MAX_AGE;
+                          // Ensure at least MIN_AGE_RANGE years between min and max
+                          const maxVal = Math.max(currentMax, minVal + MIN_AGE_RANGE);
                           onChange({
                             ...filters,
-                            ageRange: [Math.min(minVal, maxVal - 1), maxVal]
+                            ageRange: [minVal, Math.min(maxVal, MAX_AGE)]
                           });
                         }}
                         className="w-full h-2 bg-hole-border rounded-lg appearance-none cursor-pointer accent-purple-500"
@@ -234,15 +237,17 @@ export default function FilterBar({ filters, onChange, showFavorites = true }: F
                       <label className="text-xs text-hole-muted block mb-1">Max</label>
                       <input
                         type="range"
-                        min={MIN_AGE}
+                        min={MIN_AGE + MIN_AGE_RANGE}
                         max={MAX_AGE}
                         value={filters.ageRange?.[1] ?? MAX_AGE}
                         onChange={(e) => {
                           const maxVal = Number(e.target.value);
-                          const minVal = filters.ageRange?.[0] ?? MIN_AGE;
+                          const currentMin = filters.ageRange?.[0] ?? MIN_AGE;
+                          // Ensure at least MIN_AGE_RANGE years between min and max
+                          const minVal = Math.min(currentMin, maxVal - MIN_AGE_RANGE);
                           onChange({
                             ...filters,
-                            ageRange: [minVal, Math.max(maxVal, minVal + 1)]
+                            ageRange: [Math.max(minVal, MIN_AGE), maxVal]
                           });
                         }}
                         className="w-full h-2 bg-hole-border rounded-lg appearance-none cursor-pointer accent-purple-500"
