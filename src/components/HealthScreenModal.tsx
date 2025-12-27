@@ -2,31 +2,26 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { XIcon } from './icons';
 import { useContactTracing, STI_TYPES } from '@/hooks/useContactTracing';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
+import { StiResult, StiResults, deriveStatusFromResults } from '@/hooks/useHealthScreens';
 
-// STI result options
-type StiResult = 'positive' | 'negative' | 'not_tested';
-
-interface StiResults {
-  [key: string]: StiResult;
-}
+// Filtered STI list (exclude 'other')
+const TESTABLE_STIS = STI_TYPES.filter(s => s.id !== 'other');
 
 interface HealthScreenModalProps {
   onClose: () => void;
   onSave: (
     testDate: string,
-    result?: 'all_clear' | 'needs_followup' | 'pending',
-    notes?: string,
-    resultsDetail?: StiResults
+    resultsDetail: StiResults,
+    notes?: string
   ) => Promise<void>;
   initialData?: {
     testDate: string;
-    result?: 'all_clear' | 'needs_followup' | 'pending' | null;
-    notes?: string | null;
     resultsDetail?: StiResults | null;
+    notes?: string | null;
   };
 }
 
@@ -41,16 +36,11 @@ export default function HealthScreenModal({
   const [testDate, setTestDate] = useState(
     initialData?.testDate || new Date().toISOString().split('T')[0]
   );
-  const [result, setResult] = useState<'all_clear' | 'needs_followup' | 'pending' | ''>(
-    initialData?.result || ''
-  );
   const [notes, setNotes] = useState(initialData?.notes || '');
-  const [showDetailedResults, setShowDetailedResults] = useState(false);
   const [stiResults, setStiResults] = useState<StiResults>(
     initialData?.resultsDetail || {}
   );
   const [saving, setSaving] = useState(false);
-  const [notificationsSent, setNotificationsSent] = useState(0);
 
   const handleStiResultChange = (stiId: string, value: StiResult) => {
     setStiResults((prev) => ({
@@ -59,32 +49,40 @@ export default function HealthScreenModal({
     }));
   };
 
-  const hasPositiveResults = Object.values(stiResults).some((r) => r === 'positive');
+  // Check if all STIs have a selection
+  const allStisFilled = useMemo(() => {
+    return TESTABLE_STIS.every((sti) => stiResults[sti.id] !== undefined);
+  }, [stiResults]);
+
+  // Count positive results
+  const positiveResults = useMemo(() => {
+    return Object.entries(stiResults)
+      .filter(([, result]) => result === 'positive')
+      .map(([stiId]) => STI_TYPES.find(s => s.id === stiId)?.label || stiId);
+  }, [stiResults]);
+
+  // Derive overall status
+  const derivedStatus = useMemo(() => {
+    if (!allStisFilled) return null;
+    return deriveStatusFromResults(stiResults);
+  }, [stiResults, allStisFilled]);
 
   const handleSave = async () => {
-    if (!testDate) return;
+    if (!testDate || !allStisFilled) return;
 
     try {
       setSaving(true);
 
       // If user has opted into contact tracing and has positive results, send notifications
-      if (settings?.contact_tracing_opted_in && hasPositiveResults) {
-        let totalSent = 0;
+      if (settings?.contact_tracing_opted_in && positiveResults.length > 0) {
         for (const [stiId, stiResult] of Object.entries(stiResults)) {
           if (stiResult === 'positive') {
-            const count = await sendNotifications(stiId, testDate);
-            totalSent += count;
+            await sendNotifications(stiId, testDate);
           }
         }
-        setNotificationsSent(totalSent);
       }
 
-      await onSave(
-        testDate,
-        result || undefined,
-        notes || undefined,
-        Object.keys(stiResults).length > 0 ? stiResults : undefined
-      );
+      await onSave(testDate, stiResults, notes || undefined);
       onClose();
     } catch (err) {
       console.error('Failed to save health screen:', err);
@@ -94,16 +92,30 @@ export default function HealthScreenModal({
     }
   };
 
-  const resultOptions: { value: 'all_clear' | 'needs_followup' | 'pending'; label: string }[] = [
-    { value: 'all_clear', label: 'All Clear' },
-    { value: 'needs_followup', label: 'Needs Follow-up' },
-    { value: 'pending', label: 'Pending Results' },
-  ];
+  const getResultButtonClass = (stiId: string, resultType: StiResult) => {
+    const isSelected = stiResults[stiId] === resultType;
+    const baseClass = 'px-2 py-1.5 text-xs rounded transition-colors font-medium';
+
+    if (!isSelected) {
+      return `${baseClass} bg-hole-bg border border-hole-border hover:bg-hole-border`;
+    }
+
+    switch (resultType) {
+      case 'negative':
+        return `${baseClass} bg-green-500 text-white`;
+      case 'positive':
+        return `${baseClass} bg-red-500 text-white`;
+      case 'pending':
+        return `${baseClass} bg-yellow-500 text-black`;
+      case 'not_tested':
+        return `${baseClass} bg-gray-500 text-white`;
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
+      <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             {initialData ? 'Edit Health Screen' : 'Log Health Screen'}
@@ -128,104 +140,99 @@ export default function HealthScreenModal({
           />
         </div>
 
-        {/* Result */}
-        <div>
-          <label className="text-sm text-hole-muted mb-2 block">Overall Result</label>
-          <div className="flex flex-wrap gap-2">
-            {resultOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => {
-                  setResult(result === opt.value ? '' : opt.value);
-                  if (opt.value === 'needs_followup') {
-                    setShowDetailedResults(true);
-                  }
-                }}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                  result === opt.value
-                    ? opt.value === 'all_clear'
-                      ? 'bg-green-500 text-white'
-                      : opt.value === 'needs_followup'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-yellow-500 text-black'
-                    : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+        {/* STI Results - ALWAYS visible, REQUIRED */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-hole-muted font-medium">Test Results</label>
+            <span className="text-xs text-hole-muted">
+              {Object.keys(stiResults).length}/{TESTABLE_STIS.length} set
+            </span>
           </div>
-        </div>
 
-        {/* Detailed Results Toggle */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowDetailedResults(!showDetailedResults)}
-            className="text-sm text-hole-accent hover:underline"
-          >
-            {showDetailedResults ? 'Hide detailed results' : 'Add detailed results (for contact tracing)'}
-          </button>
-        </div>
-
-        {/* Detailed STI Results */}
-        {showDetailedResults && (
-          <div className="space-y-3 bg-hole-surface rounded-lg p-3">
-            <p className="text-xs text-hole-muted">
-              Select individual test results. If you&apos;re opted into contact tracing,
-              positive results will trigger anonymous notifications to recent partners.
-            </p>
-
-            {STI_TYPES.filter(s => s.id !== 'other').map((sti) => (
-              <div key={sti.id} className="flex items-center justify-between">
-                <span className="text-sm">{sti.label}</span>
+          <div className="bg-hole-surface rounded-lg p-3 space-y-3">
+            {TESTABLE_STIS.map((sti) => (
+              <div key={sti.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm flex-shrink-0">{sti.label}</span>
                 <div className="flex gap-1">
                   <button
                     type="button"
                     onClick={() => handleStiResultChange(sti.id, 'negative')}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      stiResults[sti.id] === 'negative'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-hole-bg border border-hole-border hover:bg-hole-border'
-                    }`}
+                    className={getResultButtonClass(sti.id, 'negative')}
+                    title="Negative"
                   >
                     Neg
                   </button>
                   <button
                     type="button"
                     onClick={() => handleStiResultChange(sti.id, 'positive')}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      stiResults[sti.id] === 'positive'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-hole-bg border border-hole-border hover:bg-hole-border'
-                    }`}
+                    className={getResultButtonClass(sti.id, 'positive')}
+                    title="Positive"
                   >
                     Pos
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleStiResultChange(sti.id, 'pending')}
+                    className={getResultButtonClass(sti.id, 'pending')}
+                    title="Pending Results"
+                  >
+                    Pend
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleStiResultChange(sti.id, 'not_tested')}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      stiResults[sti.id] === 'not_tested'
-                        ? 'bg-gray-500 text-white'
-                        : 'bg-hole-bg border border-hole-border hover:bg-hole-border'
-                    }`}
+                    className={getResultButtonClass(sti.id, 'not_tested')}
+                    title="Not Tested"
                   >
                     N/A
                   </button>
                 </div>
               </div>
             ))}
-
-            {/* Contact tracing info */}
-            {hasPositiveResults && settings?.contact_tracing_opted_in && (
-              <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400">
-                Anonymous notifications will be sent to recent partners who have opted into contact tracing.
-              </div>
-            )}
           </div>
-        )}
+
+          {/* Derived status preview */}
+          {allStisFilled && derivedStatus && (
+            <div className={`p-3 rounded-lg text-sm ${
+              derivedStatus === 'all_clear'
+                ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                : derivedStatus === 'needs_followup'
+                ? 'bg-red-500/10 border border-red-500/30 text-red-400'
+                : 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400'
+            }`}>
+              {derivedStatus === 'all_clear' && (
+                <>All clear - no positive results</>
+              )}
+              {derivedStatus === 'needs_followup' && (
+                <>Needs follow-up: {positiveResults.join(', ')}</>
+              )}
+              {derivedStatus === 'pending' && (
+                <>Some results still pending - remember to update when ready</>
+              )}
+            </div>
+          )}
+
+          {/* Contact tracing warning */}
+          {positiveResults.length > 0 && settings?.contact_tracing_opted_in && (
+            <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>
+                  Anonymous notifications will be sent to recent partners who have opted into contact tracing.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Not all filled message */}
+          {!allStisFilled && (
+            <p className="text-xs text-hole-muted">
+              Please set a result for all tests before saving. Use &quot;N/A&quot; for tests you didn&apos;t take.
+            </p>
+          )}
+        </div>
 
         {/* Notes */}
         <div>
@@ -248,7 +255,7 @@ export default function HealthScreenModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={!testDate || saving}
+            disabled={!testDate || !allStisFilled || saving}
             className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save'}

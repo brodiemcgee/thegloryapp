@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useHealthScreens } from '@/hooks/useHealthScreens';
+import { useHealthScreens, StiResults } from '@/hooks/useHealthScreens';
 import { useEncounters } from '@/hooks/useEncounters';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { useContactTracing } from '@/hooks/useContactTracing';
@@ -69,10 +69,10 @@ export default function HealthView() {
 
   const handleAddHealthScreen = async (
     testDate: string,
-    result?: 'all_clear' | 'needs_followup' | 'pending',
+    resultsDetail: StiResults,
     notes?: string
   ) => {
-    await addScreen(testDate, result, notes);
+    await addScreen(testDate, resultsDetail, notes);
   };
 
   const handleAddManualEncounter = async (
