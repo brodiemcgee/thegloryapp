@@ -20,7 +20,7 @@ interface InAppNotificationProps {
 
 export default function InAppNotification({ onNavigate }: InAppNotificationProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const { playChirp } = useNotificationSound();
+  const { playHeartbeat } = useNotificationSound();
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -50,7 +50,7 @@ export default function InAppNotification({ onNavigate }: InAppNotificationProps
         setNotifications(prev => [...prev, newNotification]);
 
         // Play sound
-        playChirp();
+        playHeartbeat();
 
         // Auto-dismiss after 10 seconds
         setTimeout(() => {
@@ -64,7 +64,7 @@ export default function InAppNotification({ onNavigate }: InAppNotificationProps
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleMessage);
     };
-  }, [dismissNotification, playChirp]);
+  }, [dismissNotification, playHeartbeat]);
 
   if (notifications.length === 0) {
     return null;

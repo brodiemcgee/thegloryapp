@@ -7,7 +7,7 @@ import { useCallback, useRef } from 'react';
 export function useNotificationSound() {
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const playChirp = useCallback(() => {
+  const playHeartbeat = useCallback(() => {
     try {
       // Create or reuse AudioContext
       if (!audioContextRef.current) {
@@ -22,41 +22,47 @@ export function useNotificationSound() {
 
       const now = ctx.currentTime;
 
-      // Create a pleasant two-tone chirp
-      const oscillator1 = ctx.createOscillator();
-      const oscillator2 = ctx.createOscillator();
-      const gainNode = ctx.createGain();
+      // Create a realistic heartbeat: lub-dub pattern
+      const createBeat = (startTime: number, intensity: number) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
 
-      // First tone - higher pitch
-      oscillator1.type = 'sine';
-      oscillator1.frequency.setValueAtTime(880, now); // A5
-      oscillator1.frequency.setValueAtTime(1047, now + 0.1); // C6
+        // Low frequency for deep thump
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(60, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(40, startTime + 0.1);
 
-      // Second tone - harmony
-      oscillator2.type = 'sine';
-      oscillator2.frequency.setValueAtTime(659, now); // E5
-      oscillator2.frequency.setValueAtTime(784, now + 0.1); // G5
+        // Low-pass filter for warmth
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(150, startTime);
 
-      // Volume envelope - quick fade in/out
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
-      gainNode.gain.linearRampToValueAtTime(0.2, now + 0.15);
-      gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+        // Quick attack, medium decay - like a real heartbeat
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(intensity, startTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
 
-      // Connect nodes
-      oscillator1.connect(gainNode);
-      oscillator2.connect(gainNode);
-      gainNode.connect(ctx.destination);
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
 
-      // Play
-      oscillator1.start(now);
-      oscillator2.start(now);
-      oscillator1.stop(now + 0.3);
-      oscillator2.stop(now + 0.3);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.2);
+      };
+
+      // Lub-dub pattern (two beats close together, then pause)
+      // First heartbeat
+      createBeat(now, 0.6);           // lub
+      createBeat(now + 0.12, 0.4);    // dub
+
+      // Second heartbeat (slightly softer echo)
+      createBeat(now + 0.5, 0.5);     // lub
+      createBeat(now + 0.62, 0.35);   // dub
+
     } catch (err) {
       console.error('Failed to play notification sound:', err);
     }
   }, []);
 
-  return { playChirp };
+  return { playHeartbeat };
 }
