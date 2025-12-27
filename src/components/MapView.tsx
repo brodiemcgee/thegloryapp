@@ -276,34 +276,40 @@ export default function MapView() {
     }
   }, [viewMode, filteredUsers, mapLoaded]);
 
-  // Calculate users at each location (from presence data)
+  // Calculate users at each location (from nearby users + presence data)
   const usersAtLocations = useMemo(() => {
-    const locationUserMap: Record<string, { users: typeof onlineUsers; count: number }> = {};
+    const locationUserMap: Record<string, {
+      presenceUsers: typeof onlineUsers;
+      nearbyUsers: User[];
+    }> = {};
 
-    // Initialize with location base counts
+    // Initialize empty arrays for each location
     mockLocations.forEach(loc => {
-      locationUserMap[loc.id] = { users: [], count: loc.user_count };
+      locationUserMap[loc.id] = { presenceUsers: [], nearbyUsers: [] };
+    });
+
+    // Find nearby users (within 50m of each location) from filteredUsers
+    filteredUsers.forEach(user => {
+      if (!user.location) return;
+
+      mockLocations.forEach(loc => {
+        const distanceKm = calculateDistance(user.location!, { lat: loc.lat, lng: loc.lng });
+        if (distanceKm * 1000 <= 50) { // Within 50 meters
+          locationUserMap[loc.id].nearbyUsers.push(user);
+        }
+      });
     });
 
     // Add users from presence who are snapped to locations
     onlineUsers.forEach(user => {
       const snappedId = (user as typeof user & { snapped_to_location_id?: string }).snapped_to_location_id;
       if (snappedId && locationUserMap[snappedId]) {
-        locationUserMap[snappedId].users.push(user);
+        locationUserMap[snappedId].presenceUsers.push(user);
       }
     });
 
-    // If current user is snapped, add them too
-    if (snappedLocation && currentUserProfile) {
-      const existing = locationUserMap[snappedLocation.id];
-      if (existing && !existing.users.some(u => u.user_id === currentUserProfile.id)) {
-        // We'll represent current user in the count
-        existing.count += 1;
-      }
-    }
-
     return locationUserMap;
-  }, [onlineUsers, snappedLocation, currentUserProfile]);
+  }, [onlineUsers, filteredUsers]);
 
   // Update location markers with user count badges
   useEffect(() => {
@@ -317,8 +323,7 @@ export default function MapView() {
       if (!map.current) return;
 
       const usersData = usersAtLocations[location.id];
-      const userCount = usersData?.users.length || 0;
-      const totalCount = userCount + (location.user_count || 0);
+      const totalCount = (usersData?.nearbyUsers.length || 0) + (usersData?.presenceUsers.length || 0);
 
       const el = document.createElement('div');
       el.className = 'location-marker';

@@ -2,15 +2,15 @@
 
 'use client';
 
-import { Location } from '@/types';
+import { Location, User } from '@/types';
 import { PresenceUser } from '@/hooks/usePresence';
 import { XIcon, CheckIcon, ChevronLeftIcon } from './icons';
 
 interface LocationUsersDrawerProps {
   location: Location;
   usersAtLocation: {
-    users: PresenceUser[];
-    count: number;
+    presenceUsers: PresenceUser[];
+    nearbyUsers: User[];
   };
   currentUserId?: string;
   isCurrentUserSnapped: boolean;
@@ -45,8 +45,10 @@ export default function LocationUsersDrawer({
   isCurrentUserSnapped,
   onClose,
 }: LocationUsersDrawerProps) {
-  const { users, count } = usersAtLocation;
-  const totalUsers = users.length + count;
+  const { presenceUsers, nearbyUsers } = usersAtLocation;
+  // Filter out current user from nearby users if they're snapped (we show them separately)
+  const filteredNearbyUsers = nearbyUsers.filter(u => u.id !== currentUserId);
+  const totalUsers = presenceUsers.length + filteredNearbyUsers.length + (isCurrentUserSnapped ? 1 : 0);
 
   return (
     <>
@@ -104,8 +106,43 @@ export default function LocationUsersDrawer({
               </div>
             )}
 
-            {/* Online users from presence */}
-            {users.map((user) => (
+            {/* Nearby users (from mock/DB data) */}
+            {filteredNearbyUsers.map((user) => (
+              <button
+                key={user.id}
+                className="w-full flex items-center gap-3 p-3 bg-hole-bg rounded-lg transition-colors hover:bg-hole-border"
+              >
+                <div className="relative">
+                  <div className="w-10 h-10 bg-hole-border rounded-full flex items-center justify-center overflow-hidden">
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {user.username?.charAt(0).toUpperCase() || '?'}
+                      </span>
+                    )}
+                  </div>
+                  {/* Online indicator */}
+                  {user.is_online && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-hole-bg" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="font-medium text-white truncate">{user.username}</div>
+                  <div className={`text-xs ${intentColors[user.intent] || 'text-hole-muted'}`}>
+                    {intentLabels[user.intent] || 'Chatting'}
+                  </div>
+                </div>
+                <ChevronLeftIcon className="w-4 h-4 text-hole-muted rotate-180" />
+              </button>
+            ))}
+
+            {/* Online users from presence (real-time) */}
+            {presenceUsers.map((user) => (
               <button
                 key={user.user_id}
                 className="w-full flex items-center gap-3 p-3 bg-hole-bg rounded-lg transition-colors hover:bg-hole-border"
@@ -137,15 +174,8 @@ export default function LocationUsersDrawer({
               </button>
             ))}
 
-            {/* Placeholder users for base count (non-presence users) */}
-            {count > 0 && (
-              <div className="text-center text-sm text-hole-muted py-3">
-                + {count} other {count === 1 ? 'user' : 'users'} nearby
-              </div>
-            )}
-
             {/* Empty state */}
-            {users.length === 0 && count === 0 && !isCurrentUserSnapped && (
+            {totalUsers === 0 && (
               <div className="text-center text-sm text-hole-muted py-6">
                 No users at this location right now
               </div>

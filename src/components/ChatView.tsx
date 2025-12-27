@@ -13,6 +13,7 @@ import BlockConfirmModal from './BlockConfirmModal';
 import { useBlock } from '@/hooks/useBlock';
 import { useReport } from '@/hooks/useReport';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { useUserInteraction } from '@/hooks/useUserInteraction';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -25,6 +26,12 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showEncounterModal, setShowEncounterModal] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [encounterDate, setEncounterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [encounterNotes, setEncounterNotes] = useState('');
+  const [encounterRating, setEncounterRating] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,6 +39,22 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const { blockUser, isBlocked } = useBlock();
   const { submitReport } = useReport();
   const { upload, uploading, progress, error: uploadError } = usePhotoUpload();
+
+  // User interaction hooks for favorites, notes, and encounters
+  const {
+    isFavorite,
+    notes,
+    hasMet,
+    encounters,
+    toggleFavorite,
+    updateNotes,
+    addEncounter,
+  } = useUserInteraction(conversation.user.id);
+
+  // Sync notes text with stored notes
+  useEffect(() => {
+    setNotesText(notes);
+  }, [notes]);
 
   // Use Realtime hooks
   const { messages, loading, sendMessage, markAsRead } = useRealtimeMessages({
@@ -204,6 +227,48 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             {isOtherUserTyping ? 'Typing...' : conversation.user.is_online ? 'Online' : 'Offline'}
           </p>
         </div>
+
+        {/* User interaction buttons */}
+        {/* Favorite button */}
+        <button
+          onClick={toggleFavorite}
+          className={`p-2 rounded-lg transition-colors ${
+            isFavorite ? 'text-red-500' : 'hover:bg-hole-border text-hole-muted'
+          }`}
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <svg className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+
+        {/* Notes button - only show when favorited */}
+        {isFavorite && (
+          <button
+            onClick={() => setShowNotesModal(true)}
+            className={`p-2 rounded-lg transition-colors ${
+              notes ? 'text-yellow-500' : 'hover:bg-hole-border text-hole-muted'
+            }`}
+            aria-label="View notes"
+          >
+            <svg className="w-5 h-5" fill={notes ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Met button - opens encounter modal */}
+        <button
+          onClick={() => setShowEncounterModal(true)}
+          className={`p-2 rounded-lg transition-colors ${
+            hasMet ? 'text-green-500' : 'hover:bg-hole-border text-hole-muted'
+          }`}
+          aria-label="Log encounter"
+        >
+          <svg className="w-5 h-5" fill={hasMet ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </button>
 
         {/* Menu button */}
         <div className="relative">
