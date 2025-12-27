@@ -109,7 +109,7 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
 
       {/* Bottom gradient overlay with distance and name */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 pt-8">
-        <div className="min-w-0">
+        <div className="min-w-0 text-left">
           {user.distance_km !== undefined && (
             <span className="text-xs text-white/70 drop-shadow-md block">
               {formatDistance(user.distance_km)}
