@@ -162,6 +162,10 @@ export default function MapView() {
     const initial = user.username.charAt(0).toUpperCase();
     const hasAvatar = user.avatar_url && user.avatar_url.length > 0;
 
+    // Check if user is recently active (within 10 min) for glow effect
+    const isRecentlyActive = user.last_active &&
+      (Date.now() - new Date(user.last_active).getTime()) / (1000 * 60) <= 10;
+
     // Simple container - no position/z-index to avoid Mapbox conflicts
     const el = document.createElement('div');
     el.className = 'user-marker';
@@ -176,7 +180,7 @@ export default function MapView() {
       height: 48px;
       border-radius: 50%;
       border: 3px solid ${ringColor};
-      box-shadow: ${user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none'};
+      box-shadow: ${isRecentlyActive ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none'};
       box-sizing: border-box;
     `;
 
