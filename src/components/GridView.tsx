@@ -14,11 +14,8 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { calculateDistance } from '@/lib/geo';
 import FilterBar, { FilterState, defaultFilters } from './FilterBar';
 
-type SortOption = 'distance' | 'active';
-
 export default function GridView() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<SortOption>('distance');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { position } = useGeolocation();
@@ -85,18 +82,14 @@ export default function GridView() {
       result = result.filter((u) => u.position === filters.position);
     }
 
-    // Sort
-    if (sortBy === 'distance') {
-      result.sort((a, b) => (a.distance_km || 999) - (b.distance_km || 999));
-    } else {
-      result.sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime());
-    }
+    // Sort by distance
+    result.sort((a, b) => (a.distance_km || 999) - (b.distance_km || 999));
 
     // Always show current user first (use db profile if available)
     const currentProfile = currentUserProfile || currentUser;
     result = result.filter(u => u.id !== currentProfile.id);
     return [{ ...currentProfile, distance_km: 0 }, ...result];
-  }, [dbUsers, filters, sortBy, position, currentUserProfile, favorites]);
+  }, [dbUsers, filters, position, currentUserProfile, favorites]);
 
   if (selectedUser) {
     return <UserProfile user={selectedUser} onBack={() => setSelectedUser(null)} />;
@@ -108,15 +101,6 @@ export default function GridView() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-hole-border">
         <h1 className="text-lg font-semibold">Nearby</h1>
         <div className="flex items-center gap-2">
-          {/* Sort selector */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="bg-hole-surface text-white text-sm rounded-lg px-2 py-1.5 outline-none border border-hole-border"
-          >
-            <option value="distance">By Distance</option>
-            <option value="active">By Active</option>
-          </select>
           <button
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
             className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
