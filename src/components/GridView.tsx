@@ -140,7 +140,7 @@ export default function GridView() {
           <div
             className={
               viewMode === 'grid'
-                ? 'grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1.5'
+                ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2'
                 : 'flex flex-col gap-2'
             }
           >

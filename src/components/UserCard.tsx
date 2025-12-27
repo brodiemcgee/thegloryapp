@@ -78,39 +78,52 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col w-full bg-hole-surface rounded-md overflow-hidden transition-transform active:scale-95"
+      className="relative w-full aspect-[3/4] bg-hole-surface rounded-lg overflow-hidden transition-transform active:scale-95"
     >
       {/* Image */}
-      <div className="relative aspect-square bg-hole-border overflow-hidden">
-        {user.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-2xl text-hole-muted">?</span>
+      {user.avatar_url ? (
+        <img
+          src={user.avatar_url}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-hole-border">
+          <span className="text-4xl text-hole-muted">?</span>
+        </div>
+      )}
+
+      {/* Top badges */}
+      <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+        {/* Verified badge */}
+        {user.is_verified && (
+          <div className="bg-blue-500 rounded-full p-1">
+            <CheckIcon className="w-3 h-3 text-white" />
           </div>
         )}
         {/* Online indicator */}
         {user.is_online && (
-          <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-hole-surface" />
-        )}
-        {/* Verified badge */}
-        {user.is_verified && (
-          <div className="absolute top-1 left-1">
-            <CheckIcon className="w-3 h-3 text-blue-500 drop-shadow-md" />
-          </div>
+          <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white/50 ml-auto" />
         )}
       </div>
 
-      {/* Info - minimal */}
-      <div className="px-1 py-0.5">
-        <span className="font-medium text-[10px] truncate block leading-tight">{user.username}</span>
-        <span className="text-[9px] text-hole-muted leading-tight">
-          {formatDistance(user.distance_km)}
-        </span>
+      {/* Bottom gradient overlay with name and distance */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 pt-8">
+        <div className="flex items-end justify-between gap-1">
+          <div className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-white truncate block drop-shadow-md">
+              {user.username}
+            </span>
+            {user.age && (
+              <span className="text-xs text-white/80 drop-shadow-md">{user.age}</span>
+            )}
+          </div>
+          {user.distance_km !== undefined && (
+            <span className="text-xs text-white/80 drop-shadow-md flex-shrink-0">
+              {formatDistance(user.distance_km)}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
