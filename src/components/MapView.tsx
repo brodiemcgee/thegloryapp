@@ -47,7 +47,7 @@ export default function MapView() {
   const { favorites } = useFavorites();
 
   // Fetch real users from database
-  const { users: dbUsers, currentUserProfile } = useNearbyUsers(position, {
+  const { allUsers: dbUsers, currentUserProfile } = useNearbyUsers(position, {
     radiusKm: DEFAULT_RADIUS_KM,
   });
 

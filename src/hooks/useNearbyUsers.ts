@@ -230,6 +230,7 @@ export function useNearbyUsers(
 
   return {
     users: filteredUsers,
+    allUsers: users, // Unfiltered users for map view
     currentUserProfile,
     loading,
     error,
