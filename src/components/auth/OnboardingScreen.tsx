@@ -57,6 +57,7 @@ export default function OnboardingScreen({ onComplete, referralCode }: Onboardin
         .upsert({
           id: user.id,
           username: username.toLowerCase(),
+          display_name: username.toLowerCase(),  // Start with username, user can change later
           intent: 'chatting',  // Default intent, can be changed in-app
           availability: 'now',  // Default availability
           onboarded: true,
