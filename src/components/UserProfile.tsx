@@ -13,6 +13,7 @@ import { useReport } from '@/hooks/useReport';
 import { useProfileViews } from '@/hooks/useProfileViews';
 import { useUserInteraction } from '@/hooks/useUserInteraction';
 import { useUnlockedProfiles } from '@/hooks/useUnlockedProfiles';
+import { useNavigation } from '@/contexts/NavigationContext';
 import EncounterFormModal from './EncounterFormModal';
 
 interface UserProfileProps {
@@ -102,6 +103,7 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
     remainingSlots,
     tier,
   } = useUnlockedProfiles();
+  const { navigateToMessages } = useNavigation();
 
   const [showEncounterModal, setShowEncounterModal] = useState(false);
 
@@ -116,9 +118,8 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
       if (!profileUnlocked) {
         unlockProfile(user.id);
       }
-      // TODO: Navigate to messages with this user
-      // For now, just show a console log
-      console.log('Starting conversation with', user.username);
+      // Navigate to messages with this user
+      navigateToMessages(user);
     } else {
       // Show the upgrade modal
       setShowProfileLimitModal(true);

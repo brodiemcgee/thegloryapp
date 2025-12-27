@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import MapView from '@/components/MapView';
@@ -12,31 +12,30 @@ import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
 import InAppNotification from '@/components/InAppNotification';
 import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
+import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 
-type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
-
-export default function Home() {
+function AppContent() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>('map');
+  const { activeTab, setActiveTab } = useNavigation();
 
   // Handle URL tab parameter (e.g., from push notification clicks)
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['map', 'grid', 'messages', 'health', 'me'].includes(tabParam)) {
-      setActiveTab(tabParam as Tab);
+      setActiveTab(tabParam as 'map' | 'grid' | 'messages' | 'health' | 'me');
       // Clean up URL without reloading
       window.history.replaceState({}, '', '/');
     }
-  }, [searchParams]);
+  }, [searchParams, setActiveTab]);
 
   // Handle in-app notification navigation
   const handleNotificationNavigate = useCallback((url: string) => {
     const urlObj = new URL(url, window.location.origin);
     const tabParam = urlObj.searchParams.get('tab');
     if (tabParam && ['map', 'grid', 'messages', 'health', 'me'].includes(tabParam)) {
-      setActiveTab(tabParam as Tab);
+      setActiveTab(tabParam as 'map' | 'grid' | 'messages' | 'health' | 'me');
     }
-  }, []);
+  }, [setActiveTab]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -56,19 +55,27 @@ export default function Home() {
   };
 
   return (
-    <ContactTracingProvider>
-      <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
-        {/* In-app notifications */}
-        <InAppNotification onNavigate={handleNotificationNavigate} />
+    <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
+      {/* In-app notifications */}
+      <InAppNotification onNavigate={handleNotificationNavigate} />
 
-        {/* Main content area */}
-        <div className="flex-1 overflow-hidden">
-          {renderContent()}
-        </div>
+      {/* Main content area */}
+      <div className="flex-1 overflow-hidden">
+        {renderContent()}
+      </div>
 
-        {/* Bottom navigation */}
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-      </main>
-    </ContactTracingProvider>
+      {/* Bottom navigation */}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+    </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <NavigationProvider>
+      <ContactTracingProvider>
+        <AppContent />
+      </ContactTracingProvider>
+    </NavigationProvider>
   );
 }

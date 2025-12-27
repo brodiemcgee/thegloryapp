@@ -2,17 +2,47 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { mockConversations } from '@/data/mockData';
 import { Conversation } from '@/types';
 import { CheckIcon } from './icons';
 import ChatView from './ChatView';
+import { useNavigation } from '@/contexts/NavigationContext';
 
 type TabOption = 'all' | 'verified' | 'requests';
 
 export default function MessagesView() {
   const [activeTab, setActiveTab] = useState<TabOption>('all');
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const { targetMessageUser, clearTargetMessageUser } = useNavigation();
+
+  // All conversations including any dynamically created ones
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+
+  // Handle navigation to a specific user's conversation
+  useEffect(() => {
+    if (targetMessageUser) {
+      // Check if conversation already exists
+      let existingConv = conversations.find(c => c.user.id === targetMessageUser.id);
+
+      if (!existingConv) {
+        // Create a new conversation with this user
+        const newConversation: Conversation = {
+          id: `conv-${targetMessageUser.id}-${Date.now()}`,
+          user: targetMessageUser,
+          last_message: null,
+          unread_count: 0,
+          updated_at: new Date().toISOString(),
+        };
+        setConversations(prev => [newConversation, ...prev]);
+        existingConv = newConversation;
+      }
+
+      // Open the conversation
+      setSelectedConversation(existingConv);
+      clearTargetMessageUser();
+    }
+  }, [targetMessageUser, conversations, clearTargetMessageUser]);
 
   const tabs: { id: TabOption; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -20,7 +50,7 @@ export default function MessagesView() {
     { id: 'requests', label: 'Requests' },
   ];
 
-  const filteredConversations = mockConversations.filter((conv) => {
+  const filteredConversations = conversations.filter((conv) => {
     if (activeTab === 'verified') return conv.user.is_verified;
     if (activeTab === 'requests') return conv.unread_count > 0;
     return true;
