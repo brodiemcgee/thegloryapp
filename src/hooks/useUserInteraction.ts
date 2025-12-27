@@ -168,7 +168,7 @@ export function useUserInteraction(targetUserId: string) {
 
     if (error) {
       console.error('Error adding encounter:', error);
-      return null;
+      throw error;
     }
 
     // Add to local state
