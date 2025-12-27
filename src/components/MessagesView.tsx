@@ -3,46 +3,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { mockConversations } from '@/data/mockData';
-import { Conversation } from '@/types';
 import { CheckIcon } from './icons';
 import ChatView from './ChatView';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useConversations } from '@/contexts/ConversationsContext';
 
 type TabOption = 'all' | 'verified' | 'requests';
 
 export default function MessagesView() {
   const [activeTab, setActiveTab] = useState<TabOption>('all');
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { targetMessageUser, clearTargetMessageUser } = useNavigation();
-
-  // All conversations including any dynamically created ones
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+  const {
+    conversations,
+    selectedConversation,
+    selectConversation,
+    getOrCreateConversation,
+  } = useConversations();
 
   // Handle navigation to a specific user's conversation
   useEffect(() => {
     if (targetMessageUser) {
-      // Check if conversation already exists
-      let existingConv = conversations.find(c => c.user.id === targetMessageUser.id);
-
-      if (!existingConv) {
-        // Create a new conversation with this user
-        const newConversation: Conversation = {
-          id: `conv-${targetMessageUser.id}-${Date.now()}`,
-          user: targetMessageUser,
-          last_message: null,
-          unread_count: 0,
-          updated_at: new Date().toISOString(),
-        };
-        setConversations(prev => [newConversation, ...prev]);
-        existingConv = newConversation;
-      }
-
-      // Open the conversation
-      setSelectedConversation(existingConv);
+      const conversation = getOrCreateConversation(targetMessageUser);
+      selectConversation(conversation);
       clearTargetMessageUser();
     }
-  }, [targetMessageUser, conversations, clearTargetMessageUser]);
+  }, [targetMessageUser, getOrCreateConversation, selectConversation, clearTargetMessageUser]);
 
   const tabs: { id: TabOption; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -70,7 +55,7 @@ export default function MessagesView() {
     return (
       <ChatView
         conversation={selectedConversation}
-        onBack={() => setSelectedConversation(null)}
+        onBack={() => selectConversation(null)}
       />
     );
   }
@@ -110,7 +95,7 @@ export default function MessagesView() {
             {filteredConversations.map((conv) => (
               <button
                 key={conv.id}
-                onClick={() => setSelectedConversation(conv)}
+                onClick={() => selectConversation(conv)}
                 className="flex items-center gap-3 p-4 w-full text-left transition-colors hover:bg-hole-surface"
               >
                 {/* Avatar */}

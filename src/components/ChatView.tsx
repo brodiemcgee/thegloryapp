@@ -16,12 +16,20 @@ import { useBlock } from '@/hooks/useBlock';
 import { useReport } from '@/hooks/useReport';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useUserInteraction } from '@/hooks/useUserInteraction';
+import { useConversations } from '@/contexts/ConversationsContext';
 import EncounterFormModal from './EncounterFormModal';
 
 interface ChatViewProps {
   conversation: Conversation;
   onBack: () => void;
 }
+
+// Helper to check if a conversation ID looks like a mock/local conversation
+const isMockConversation = (id: string): boolean => {
+  // Mock conversations start with 'conv-' or don't have a valid UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return !uuidRegex.test(id);
+};
 
 export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const { user } = useAuth();
@@ -41,6 +49,10 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const { submitReport } = useReport();
   const { upload, uploading, progress, error: uploadError } = usePhotoUpload();
   const { grantAccess } = useAlbumAccess();
+  const { getLocalMessages, addLocalMessage } = useConversations();
+
+  // Check if this is a mock conversation
+  const isMock = isMockConversation(conversation.id);
 
   // User interaction hooks for favorites, notes, and encounters
   const {
@@ -58,14 +70,19 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     setNotesText(notes);
   }, [notes]);
 
-  // Use Realtime hooks
-  const { messages, loading, sendMessage, markAsRead } = useRealtimeMessages({
-    conversationId: conversation.id,
+  // Use Realtime hooks for real conversations, local messages for mock ones
+  const realtimeHooks = useRealtimeMessages({
+    conversationId: isMock ? 'skip' : conversation.id,
     otherUserId: conversation.user.id,
   });
 
+  // Get messages from either realtime (for real convos) or local storage (for mock convos)
+  const localMessages = getLocalMessages(conversation.id);
+  const messages = isMock ? localMessages : realtimeHooks.messages;
+  const loading = isMock ? false : realtimeHooks.loading;
+
   const { isOtherUserTyping, setTyping } = useTypingIndicator(
-    conversation.id,
+    isMock ? 'skip' : conversation.id,
     conversation.user.id
   );
 
@@ -77,9 +94,9 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Mark unread messages as read when viewed
+  // Mark unread messages as read when viewed (only for real conversations)
   useEffect(() => {
-    if (!user || messages.length === 0) return;
+    if (isMock || !user || messages.length === 0) return;
 
     const unreadMessages = messages.filter(
       (msg) => msg.sender_id === conversation.user.id && !msg.read_at
@@ -87,17 +104,17 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
     if (unreadMessages.length > 0) {
       const messageIds = unreadMessages.map((msg) => msg.id);
-      markAsRead(messageIds);
+      realtimeHooks.markAsRead(messageIds);
     }
-  }, [messages, user, conversation.user.id, markAsRead]);
+  }, [isMock, messages, user, conversation.user.id, realtimeHooks]);
 
   const handleSend = async () => {
     if (!input.trim() && !selectedImage) return;
 
     let imageUrl = '';
 
-    // Upload image if selected
-    if (selectedImage && user) {
+    // Upload image if selected (only for real conversations)
+    if (selectedImage && user && !isMock) {
       try {
         const result = await upload(selectedImage, user.id, 'chat', conversation.id);
         imageUrl = result.url;
@@ -108,8 +125,26 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       }
     }
 
-    // Send message with optional image
-    await sendMessage(input.trim() || 'Image', imageUrl);
+    const messageContent = input.trim() || 'Image';
+
+    if (isMock) {
+      // For mock conversations, add to local state
+      const mockUserId = user?.id || 'mock-current-user';
+      const newMessage = {
+        id: `msg-${Date.now()}`,
+        sender_id: mockUserId,
+        receiver_id: conversation.user.id,
+        content: messageContent,
+        image_url: imagePreview || undefined, // Use local preview for mock
+        created_at: new Date().toISOString(),
+        read_at: undefined,
+      };
+      addLocalMessage(conversation.id, newMessage);
+    } else {
+      // Send message with optional image via realtime
+      await realtimeHooks.sendMessage(messageContent, imageUrl);
+    }
+
     setInput('');
     setImagePreview(null);
     setSelectedImage(null);
@@ -215,7 +250,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       preview_url: album.cover_url,
     };
 
-    await sendMessage('Shared an album', undefined, albumShare);
+    await realtimeHooks.sendMessage('Shared an album', undefined, albumShare);
   };
 
   // Filter out messages from blocked users

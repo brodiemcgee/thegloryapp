@@ -13,6 +13,7 @@ import ProfileView from '@/components/ProfileView';
 import InAppNotification from '@/components/InAppNotification';
 import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
+import { ConversationsProvider } from '@/contexts/ConversationsContext';
 
 function AppContent() {
   const searchParams = useSearchParams();
@@ -73,9 +74,11 @@ function AppContent() {
 export default function Home() {
   return (
     <NavigationProvider>
-      <ContactTracingProvider>
-        <AppContent />
-      </ContactTracingProvider>
+      <ConversationsProvider>
+        <ContactTracingProvider>
+          <AppContent />
+        </ContactTracingProvider>
+      </ConversationsProvider>
     </NavigationProvider>
   );
 }
