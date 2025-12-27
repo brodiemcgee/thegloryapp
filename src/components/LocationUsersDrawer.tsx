@@ -2,9 +2,9 @@
 
 'use client';
 
-import { Location, User } from '@/types';
+import { Location, User, Intent } from '@/types';
 import { PresenceUser } from '@/hooks/usePresence';
-import { XIcon, CheckIcon, ChevronLeftIcon } from './icons';
+import { XIcon, CheckIcon } from './icons';
 
 interface LocationUsersDrawerProps {
   location: Location;
@@ -15,7 +15,19 @@ interface LocationUsersDrawerProps {
   currentUserId?: string;
   isCurrentUserSnapped: boolean;
   onClose: () => void;
+  onUserClick?: (user: User) => void;
 }
+
+// Get ring color based on user intent
+const getIntentColor = (intent: Intent): string => {
+  switch (intent) {
+    case 'looking_now': return '#ef4444'; // Red
+    case 'looking_later': return '#3b82f6'; // Blue
+    case 'chatting': return '#f59e0b'; // Amber
+    case 'friends': return '#22c55e'; // Green
+    default: return '#3b82f6';
+  }
+};
 
 const typeLabels: Record<Location['type'], string> = {
   public: 'Public',
@@ -24,26 +36,13 @@ const typeLabels: Record<Location['type'], string> = {
   venue: 'Venue',
 };
 
-const intentLabels: Record<string, string> = {
-  looking_now: 'Looking Now',
-  looking_later: 'Looking Later',
-  chatting: 'Chatting',
-  friends: 'Friends',
-};
-
-const intentColors: Record<string, string> = {
-  looking_now: 'text-red-400',
-  looking_later: 'text-blue-400',
-  chatting: 'text-amber-400',
-  friends: 'text-green-400',
-};
-
 export default function LocationUsersDrawer({
   location,
   usersAtLocation,
   currentUserId,
   isCurrentUserSnapped,
   onClose,
+  onUserClick,
 }: LocationUsersDrawerProps) {
   const { presenceUsers, nearbyUsers } = usersAtLocation;
   // Filter out current user from nearby users if they're snapped (we show them separately)
@@ -59,8 +58,8 @@ export default function LocationUsersDrawer({
       />
 
       {/* Drawer */}
-      <div className="absolute bottom-0 left-0 right-0 bg-hole-surface border-t border-hole-border rounded-t-2xl z-20 animate-slide-up max-h-[70vh] flex flex-col">
-        <div className="p-4 flex-shrink-0">
+      <div className="absolute bottom-0 left-0 right-0 bg-hole-surface border-t border-hole-border rounded-t-2xl z-20 animate-slide-up">
+        <div className="p-4">
           {/* Handle */}
           <div className="w-10 h-1 bg-hole-border rounded-full mx-auto mb-4" />
 
@@ -90,101 +89,92 @@ export default function LocationUsersDrawer({
           </div>
         </div>
 
-        {/* Users list */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <div className="space-y-2">
-            {/* Current user if snapped */}
-            {isCurrentUserSnapped && (
-              <div className="flex items-center gap-3 p-3 bg-hole-accent/20 border border-hole-accent/30 rounded-lg">
-                <div className="w-10 h-10 bg-hole-border rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium">You</span>
+        {/* Users circles */}
+        <div className="px-4 pb-4">
+          {totalUsers > 0 ? (
+            <div className="flex flex-wrap gap-3 justify-center">
+              {/* Current user if snapped */}
+              {isCurrentUserSnapped && (
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-14 h-14 bg-hole-accent/30 border-2 border-hole-accent rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-hole-accent">You</span>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white">You are here</div>
-                  <div className="text-xs text-hole-muted">Your location is visible to others</div>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Nearby users (from mock/DB data) */}
-            {filteredNearbyUsers.map((user) => (
-              <button
-                key={user.id}
-                className="w-full flex items-center gap-3 p-3 bg-hole-bg rounded-lg transition-colors hover:bg-hole-border"
-              >
-                <div className="relative">
-                  <div className="w-10 h-10 bg-hole-border rounded-full flex items-center justify-center overflow-hidden">
-                    {user.avatar_url ? (
-                      <img
-                        src={user.avatar_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {user.username?.charAt(0).toUpperCase() || '?'}
-                      </span>
+              {/* Nearby users (from mock/DB data) */}
+              {filteredNearbyUsers.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => onUserClick?.(user)}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className="relative">
+                    <div
+                      className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all group-hover:scale-110"
+                      style={{ borderColor: getIntentColor(user.intent) }}
+                    >
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.username}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-hole-border flex items-center justify-center">
+                          <span className="text-lg font-medium">
+                            {user.username?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Online indicator */}
+                    {user.is_online && (
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-hole-surface" />
                     )}
                   </div>
-                  {/* Online indicator */}
-                  {user.is_online && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-hole-bg" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="font-medium text-white truncate">{user.username}</div>
-                  <div className={`text-xs ${intentColors[user.intent] || 'text-hole-muted'}`}>
-                    {intentLabels[user.intent] || 'Chatting'}
-                  </div>
-                </div>
-                <ChevronLeftIcon className="w-4 h-4 text-hole-muted rotate-180" />
-              </button>
-            ))}
+                </button>
+              ))}
 
-            {/* Online users from presence (real-time) */}
-            {presenceUsers.map((user) => (
-              <button
-                key={user.user_id}
-                className="w-full flex items-center gap-3 p-3 bg-hole-bg rounded-lg transition-colors hover:bg-hole-border"
-              >
-                <div className="relative">
-                  <div className="w-10 h-10 bg-hole-border rounded-full flex items-center justify-center overflow-hidden">
-                    {user.avatar_url ? (
-                      <img
-                        src={user.avatar_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {user.username?.charAt(0).toUpperCase() || '?'}
-                      </span>
-                    )}
+              {/* Online users from presence (real-time) */}
+              {presenceUsers.map((user) => (
+                <button
+                  key={user.user_id}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className="relative">
+                    <div
+                      className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 border-green-500 transition-all group-hover:scale-110"
+                    >
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.username}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-hole-border flex items-center justify-center">
+                          <span className="text-lg font-medium">
+                            {user.username?.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Online indicator */}
+                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-hole-surface" />
                   </div>
-                  {/* Online indicator */}
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-hole-bg" />
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="font-medium text-white truncate">{user.username}</div>
-                  <div className={`text-xs ${intentColors[user.intent || 'chatting'] || 'text-hole-muted'}`}>
-                    {intentLabels[user.intent || 'chatting'] || 'Chatting'}
-                  </div>
-                </div>
-                <ChevronLeftIcon className="w-4 h-4 text-hole-muted rotate-180" />
-              </button>
-            ))}
-
-            {/* Empty state */}
-            {totalUsers === 0 && (
-              <div className="text-center text-sm text-hole-muted py-6">
-                No users at this location right now
-              </div>
-            )}
-          </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-sm text-hole-muted py-4">
+              No users at this location right now
+            </div>
+          )}
         </div>
 
         {/* Footer action */}
-        <div className="p-4 border-t border-hole-border flex-shrink-0">
+        <div className="p-4 border-t border-hole-border">
           <button className="w-full py-3 bg-hole-border text-white rounded-lg font-medium transition-colors hover:bg-hole-muted">
             Get Directions
           </button>
