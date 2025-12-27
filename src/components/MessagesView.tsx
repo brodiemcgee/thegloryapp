@@ -15,10 +15,13 @@ export default function MessagesView() {
   const { targetMessageUser, clearTargetMessageUser } = useNavigation();
   const {
     conversations,
-    selectedConversation,
+    getSelectedConversation,
     selectConversation,
     getOrCreateConversation,
   } = useConversations();
+
+  // Get current selected conversation
+  const selectedConversation = getSelectedConversation();
 
   // Handle navigation to a specific user's conversation
   useEffect(() => {

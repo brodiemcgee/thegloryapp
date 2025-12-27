@@ -49,10 +49,13 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const { submitReport } = useReport();
   const { upload, uploading, progress, error: uploadError } = usePhotoUpload();
   const { grantAccess } = useAlbumAccess();
-  const { getLocalMessages, addLocalMessage } = useConversations();
+  const { localMessages, addLocalMessage } = useConversations();
 
   // Check if this is a mock conversation
   const isMock = isMockConversation(conversation.id);
+
+  // Get local messages for this conversation
+  const conversationLocalMessages = localMessages[conversation.id] || [];
 
   // User interaction hooks for favorites, notes, and encounters
   const {
@@ -77,8 +80,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   });
 
   // Get messages from either realtime (for real convos) or local storage (for mock convos)
-  const localMessages = getLocalMessages(conversation.id);
-  const messages = isMock ? localMessages : realtimeHooks.messages;
+  const messages = isMock ? conversationLocalMessages : realtimeHooks.messages;
   const loading = isMock ? false : realtimeHooks.loading;
 
   const { isOtherUserTyping, setTyping } = useTypingIndicator(

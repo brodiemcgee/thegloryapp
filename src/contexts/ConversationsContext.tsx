@@ -2,18 +2,18 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { Conversation, Message, User } from '@/types';
 import { mockConversations } from '@/data/mockData';
 
 interface ConversationsContextType {
   conversations: Conversation[];
-  selectedConversation: Conversation | null;
-  localMessages: Record<string, Message[]>; // conversationId -> messages
+  selectedConversationId: string | null;
+  localMessages: Record<string, Message[]>;
+  getSelectedConversation: () => Conversation | null;
   selectConversation: (conversation: Conversation | null) => void;
   getOrCreateConversation: (user: User) => Conversation;
   addLocalMessage: (conversationId: string, message: Message) => void;
-  getLocalMessages: (conversationId: string) => Message[];
 }
 
 const ConversationsContext = createContext<ConversationsContextType | undefined>(undefined);
@@ -24,16 +24,25 @@ interface ConversationsProviderProps {
 
 export function ConversationsProvider({ children }: ConversationsProviderProps) {
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<Record<string, Message[]>>({});
 
+  // Use ref to avoid stale closure issues in getOrCreateConversation
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+
+  const getSelectedConversation = useCallback((): Conversation | null => {
+    if (!selectedConversationId) return null;
+    return conversationsRef.current.find(c => c.id === selectedConversationId) || null;
+  }, [selectedConversationId]);
+
   const selectConversation = useCallback((conversation: Conversation | null) => {
-    setSelectedConversation(conversation);
+    setSelectedConversationId(conversation?.id || null);
   }, []);
 
   const getOrCreateConversation = useCallback((user: User): Conversation => {
-    // Check if conversation already exists
-    const existing = conversations.find(c => c.user.id === user.id);
+    // Check if conversation already exists using ref for current value
+    const existing = conversationsRef.current.find(c => c.user.id === user.id);
     if (existing) {
       return existing;
     }
@@ -47,9 +56,20 @@ export function ConversationsProvider({ children }: ConversationsProviderProps) 
       updated_at: new Date().toISOString(),
     };
 
-    setConversations(prev => [newConversation, ...prev]);
+    // Add to state
+    setConversations(prev => {
+      // Double-check it doesn't exist (race condition protection)
+      if (prev.find(c => c.user.id === user.id)) {
+        return prev;
+      }
+      return [newConversation, ...prev];
+    });
+
+    // Also update ref immediately for synchronous access
+    conversationsRef.current = [newConversation, ...conversationsRef.current];
+
     return newConversation;
-  }, [conversations]);
+  }, []);
 
   const addLocalMessage = useCallback((conversationId: string, message: Message) => {
     setLocalMessages(prev => ({
@@ -70,20 +90,16 @@ export function ConversationsProvider({ children }: ConversationsProviderProps) 
     }));
   }, []);
 
-  const getLocalMessages = useCallback((conversationId: string): Message[] => {
-    return localMessages[conversationId] || [];
-  }, [localMessages]);
-
   return (
     <ConversationsContext.Provider
       value={{
         conversations,
-        selectedConversation,
+        selectedConversationId,
         localMessages,
+        getSelectedConversation,
         selectConversation,
         getOrCreateConversation,
         addLocalMessage,
-        getLocalMessages,
       }}
     >
       {children}
