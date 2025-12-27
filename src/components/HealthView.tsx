@@ -172,7 +172,7 @@ export default function HealthView() {
                       {latestScreen.result === 'all_clear'
                         ? 'All Clear'
                         : latestScreen.result === 'needs_followup'
-                        ? 'Needs Follow-up'
+                        ? 'Positive result'
                         : 'Pending'}
                     </span>
                   )}

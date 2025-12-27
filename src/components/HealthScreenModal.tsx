@@ -41,6 +41,8 @@ export default function HealthScreenModal({
     initialData?.resultsDetail || {}
   );
   const [saving, setSaving] = useState(false);
+  const [showNotifyPrompt, setShowNotifyPrompt] = useState(false);
+  const [notifyPartners, setNotifyPartners] = useState<boolean | null>(null);
 
   const handleStiResultChange = (stiId: string, value: StiResult) => {
     setStiResults((prev) => ({
@@ -67,14 +69,29 @@ export default function HealthScreenModal({
     return deriveStatusFromResults(stiResults);
   }, [stiResults, allStisFilled]);
 
+  // Handle initial save button click - may show prompt first
+  const handleSaveClick = () => {
+    if (!testDate || !allStisFilled) return;
+
+    // If positive results and user hasn't made a choice about notifications yet
+    if (positiveResults.length > 0 && notifyPartners === null) {
+      setShowNotifyPrompt(true);
+      return;
+    }
+
+    // Otherwise proceed with save
+    handleSave();
+  };
+
+  // Actually save the record
   const handleSave = async () => {
     if (!testDate || !allStisFilled) return;
 
     try {
       setSaving(true);
 
-      // If user has opted into contact tracing and has positive results, send notifications
-      if (settings?.contact_tracing_opted_in && positiveResults.length > 0) {
+      // Send notifications if user chose to notify
+      if (notifyPartners === true && positiveResults.length > 0) {
         for (const [stiId, stiResult] of Object.entries(stiResults)) {
           if (stiResult === 'positive') {
             await sendNotifications(stiId, testDate);
@@ -90,6 +107,14 @@ export default function HealthScreenModal({
     } finally {
       setSaving(false);
     }
+  };
+
+  // Handle notification prompt response
+  const handleNotifyChoice = (choice: boolean) => {
+    setNotifyPartners(choice);
+    setShowNotifyPrompt(false);
+    // Proceed with save after choice is made
+    setTimeout(() => handleSave(), 0);
   };
 
   const getResultButtonClass = (stiId: string, resultType: StiResult) => {
@@ -204,25 +229,11 @@ export default function HealthScreenModal({
                 <>All clear - no positive results</>
               )}
               {derivedStatus === 'needs_followup' && (
-                <>Needs follow-up: {positiveResults.join(', ')}</>
+                <>Positive result: {positiveResults.join(', ')}</>
               )}
               {derivedStatus === 'pending' && (
                 <>Some results still pending - remember to update when ready</>
               )}
-            </div>
-          )}
-
-          {/* Contact tracing warning */}
-          {positiveResults.length > 0 && settings?.contact_tracing_opted_in && (
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
-              <div className="flex items-start gap-2">
-                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>
-                  Anonymous notifications will be sent to recent partners who have opted into contact tracing.
-                </span>
-              </div>
             </div>
           )}
 
@@ -246,6 +257,40 @@ export default function HealthScreenModal({
           />
         </div>
 
+        {/* Notification prompt */}
+        {showNotifyPrompt && (
+          <div className="p-4 bg-hole-surface border border-hole-border rounded-lg space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium">Notify your partners?</p>
+                <p className="text-sm text-hole-muted mt-1">
+                  Would you like to anonymously notify partners you&apos;ve met since your last test?
+                  They won&apos;t know who sent the notification.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleNotifyChoice(true)}
+                className="flex-1 py-2.5 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors text-sm"
+              >
+                Yes, notify them
+              </button>
+              <button
+                onClick={() => handleNotifyChoice(false)}
+                className="flex-1 py-2.5 bg-hole-border rounded-lg font-medium hover:bg-hole-muted/20 transition-colors text-sm"
+              >
+                No, skip
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -254,8 +299,8 @@ export default function HealthScreenModal({
             Cancel
           </button>
           <button
-            onClick={handleSave}
-            disabled={!testDate || !allStisFilled || saving}
+            onClick={handleSaveClick}
+            disabled={!testDate || !allStisFilled || saving || showNotifyPrompt}
             className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save'}

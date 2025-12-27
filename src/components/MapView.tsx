@@ -226,20 +226,34 @@ export default function MapView() {
       el.appendChild(badge);
     }
 
-    // Add online indicator dot (inside element bounds)
-    if (user.is_online) {
-      const onlineDot = document.createElement('div');
-      onlineDot.style.cssText = `
+    // Add activity indicator dot based on last_active time
+    // Green: < 2 min, Yellow: < 10 min, Red: < 30 min, None: > 30 min
+    const getActivityColor = (): string | null => {
+      if (!user.last_active) return null;
+      const lastActive = new Date(user.last_active).getTime();
+      const now = Date.now();
+      const minutesAgo = (now - lastActive) / (1000 * 60);
+
+      if (minutesAgo <= 2) return '#22c55e'; // Green - online now
+      if (minutesAgo <= 10) return '#eab308'; // Yellow - recently active
+      if (minutesAgo <= 30) return '#ef4444'; // Red - was active
+      return null; // Offline - no dot
+    };
+
+    const activityColor = getActivityColor();
+    if (activityColor) {
+      const activityDot = document.createElement('div');
+      activityDot.style.cssText = `
         position: absolute;
         top: 2px;
         right: 2px;
         width: 10px;
         height: 10px;
-        background: #22c55e;
+        background: ${activityColor};
         border: 2px solid #0a0a0a;
         border-radius: 50%;
       `;
-      el.appendChild(onlineDot);
+      el.appendChild(activityDot);
     }
 
     el.addEventListener('click', onClick);
