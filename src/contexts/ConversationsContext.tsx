@@ -2,9 +2,36 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
 import { Conversation, Message, User } from '@/types';
 import { mockConversations } from '@/data/mockData';
+
+// localStorage keys
+const STORAGE_KEYS = {
+  CONVERSATIONS: 'thehole_conversations',
+  LOCAL_MESSAGES: 'thehole_local_messages',
+};
+
+// Helper to safely parse JSON from localStorage
+const getFromStorage = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// Helper to save to localStorage
+const saveToStorage = <T,>(key: string, value: T): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+};
 
 interface ConversationsContextType {
   conversations: Conversation[];
@@ -23,9 +50,30 @@ interface ConversationsProviderProps {
 }
 
 export function ConversationsProvider({ children }: ConversationsProviderProps) {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+  // Initialize state from localStorage, merging with mock data
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const stored = getFromStorage<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
+    // Merge stored conversations with mock data, avoiding duplicates
+    const storedIds = new Set(stored.map(c => c.id));
+    const mockNotStored = mockConversations.filter(c => !storedIds.has(c.id));
+    return [...stored, ...mockNotStored];
+  });
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [localMessages, setLocalMessages] = useState<Record<string, Message[]>>({});
+  const [localMessages, setLocalMessages] = useState<Record<string, Message[]>>(() =>
+    getFromStorage<Record<string, Message[]>>(STORAGE_KEYS.LOCAL_MESSAGES, {})
+  );
+
+  // Save conversations to localStorage when they change
+  useEffect(() => {
+    // Only save non-mock conversations (ones we created)
+    const nonMockConversations = conversations.filter(c => c.id.startsWith('conv-'));
+    saveToStorage(STORAGE_KEYS.CONVERSATIONS, nonMockConversations);
+  }, [conversations]);
+
+  // Save local messages to localStorage when they change
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.LOCAL_MESSAGES, localMessages);
+  }, [localMessages]);
 
   // Use ref to avoid stale closure issues in getOrCreateConversation
   const conversationsRef = useRef(conversations);
