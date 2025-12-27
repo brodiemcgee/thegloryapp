@@ -47,7 +47,7 @@ export default function MapView() {
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
 
   // Fetch real users from database
-  const { users: dbUsers } = useNearbyUsers(position, {
+  const { users: dbUsers, currentUserProfile } = useNearbyUsers(position, {
     radiusKm: DEFAULT_RADIUS_KM,
     intentFilter,
   });
@@ -306,7 +306,7 @@ export default function MapView() {
     });
   }, [mapLoaded]);
 
-  // Add/update user location marker
+  // Add/update user location marker (current user's profile photo)
   useEffect(() => {
     if (!map.current || !position || !mapLoaded) return;
 
@@ -315,25 +315,79 @@ export default function MapView() {
       userLocationMarker.current.remove();
     }
 
-    // Create user location marker (blue pulsing dot)
+    const userIntent = currentUserProfile?.intent || 'chatting';
+    const ringColor = getIntentColor(userIntent);
+    const hasAvatar = currentUserProfile?.avatar_url && currentUserProfile.avatar_url.length > 0;
+    const initial = currentUserProfile?.username?.charAt(0).toUpperCase() || 'Y';
+
     const el = document.createElement('div');
     el.className = 'user-location-marker';
-    el.innerHTML = `
-      <div style="
-        width: 20px;
-        height: 20px;
-        background: #3b82f6;
-        border: 3px solid #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 0 0 rgba(59, 130, 246, 0.4);
-        animation: pulse 2s infinite;
-      "></div>
+    el.style.cssText = `
+      width: 52px;
+      height: 52px;
+      position: relative;
+      cursor: pointer;
     `;
+
+    // Create the ring/border element with pulsing animation for current user
+    const ring = document.createElement('div');
+    ring.style.cssText = `
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid ${ringColor};
+      box-shadow: 0 0 0 3px ${ringColor}50, 0 0 16px ${ringColor}70;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+    `;
+
+    // Create the inner circle with photo or initial
+    const inner = document.createElement('div');
+    inner.style.cssText = `
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: ${hasAvatar ? `url(${currentUserProfile?.avatar_url}) center/cover` : '#1f2937'};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      color: white;
+      overflow: hidden;
+      pointer-events: none;
+    `;
+
+    if (!hasAvatar) {
+      inner.textContent = initial;
+    }
+
+    el.appendChild(ring);
+    el.appendChild(inner);
+
+    // Add "You" label below
+    const label = document.createElement('div');
+    label.style.cssText = `
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: ${ringColor};
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+    `;
+    label.textContent = 'You';
+    el.appendChild(label);
 
     userLocationMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
       .setLngLat([position.lng, position.lat])
       .addTo(map.current);
-  }, [position, mapLoaded]);
+  }, [position, mapLoaded, currentUserProfile]);
 
   const handleFindMyLocation = async () => {
     setIsLocating(true);
