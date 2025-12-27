@@ -28,19 +28,22 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
-  const url = event.notification.data?.url || '/';
+  const urlPath = event.notification.data?.url || '/';
+  const fullUrl = new URL(urlPath, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // If app is already open, focus it
+      // If app is already open, navigate it to the target URL
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // Navigate to the target URL and focus
+          client.navigate(fullUrl);
           return client.focus();
         }
       }
-      // Otherwise open new window
+      // Otherwise open new window at the target URL
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow(fullUrl);
       }
     })
   );

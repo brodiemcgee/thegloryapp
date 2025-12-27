@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import MapView from '@/components/MapView';
 import GridView from '@/components/GridView';
@@ -14,7 +15,18 @@ import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>('map');
+
+  // Handle URL tab parameter (e.g., from push notification clicks)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['map', 'grid', 'messages', 'health', 'me'].includes(tabParam)) {
+      setActiveTab(tabParam as Tab);
+      // Clean up URL without reloading
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
 
   const renderContent = () => {
     switch (activeTab) {
