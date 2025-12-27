@@ -9,12 +9,14 @@ import { mockUsers, mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
-import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon } from './icons';
+import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon, MenuIcon } from './icons';
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
 import { Location, User, Intent } from '@/types';
-import { calculateDistance, isWithinRadius } from '@/lib/geo';
+import { calculateDistance, isWithinRadius, offsetLocation, findNearestLocation } from '@/lib/geo';
+import { useSettings } from '@/hooks/useSettings';
+import LocationUsersDrawer from './LocationUsersDrawer';
 
 // Set Mapbox token - will use env var in production
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
@@ -39,12 +41,15 @@ export default function MapView() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<'users' | 'heatmap'>('users');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedLocationForUsers, setSelectedLocationForUsers] = useState<Location | null>(null);
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showMapMenu, setShowMapMenu] = useState(false);
   const [intentFilter, setIntentFilter] = useState<Intent | 'all'>('all');
   const [isLocating, setIsLocating] = useState(false);
   const { position, loading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
+  const { locationAccuracy, setLocationAccuracy } = useSettings();
 
   // Fetch real users from database
   const { users: dbUsers, currentUserProfile } = useNearbyUsers(position, {
@@ -55,17 +60,38 @@ export default function MapView() {
   // Default center (Sydney) - will use user position when available
   const defaultCenter: [number, number] = [151.2093, -33.8688];
 
-  // Update presence with current location when position changes
+  // Calculate the fuzzed position for privacy (consistent during session)
+  const fuzzedPosition = useMemo(() => {
+    if (!position) return null;
+    return offsetLocation(position, locationAccuracy);
+  }, [position, locationAccuracy]);
+
+  // Check if user is within 25m of a verified location (snapping)
+  const snappedLocation = useMemo(() => {
+    if (!position) return null;
+    return findNearestLocation(position, mockLocations, 25);
+  }, [position]);
+
+  // Final display position: snapped location takes priority over fuzzed position
+  const displayPosition = useMemo(() => {
+    if (snappedLocation) {
+      return { lat: snappedLocation.lat, lng: snappedLocation.lng };
+    }
+    return fuzzedPosition;
+  }, [snappedLocation, fuzzedPosition]);
+
+  // Update presence with current position (snapped or fuzzed)
   useEffect(() => {
-    if (position) {
+    if (displayPosition) {
       updatePresence({
         location: {
-          lat: position.lat,
-          lng: position.lng,
+          lat: displayPosition.lat,
+          lng: displayPosition.lng,
         },
+        snapped_to_location_id: snappedLocation?.id,
       });
     }
-  }, [position, updatePresence]);
+  }, [displayPosition, snappedLocation, updatePresence]);
 
   // Combine real DB users with mock users for demo
   // Memoized to prevent marker flickering from unnecessary re-renders
@@ -250,7 +276,36 @@ export default function MapView() {
     }
   }, [viewMode, filteredUsers, mapLoaded]);
 
-  // Update location markers
+  // Calculate users at each location (from presence data)
+  const usersAtLocations = useMemo(() => {
+    const locationUserMap: Record<string, { users: typeof onlineUsers; count: number }> = {};
+
+    // Initialize with location base counts
+    mockLocations.forEach(loc => {
+      locationUserMap[loc.id] = { users: [], count: loc.user_count };
+    });
+
+    // Add users from presence who are snapped to locations
+    onlineUsers.forEach(user => {
+      const snappedId = (user as typeof user & { snapped_to_location_id?: string }).snapped_to_location_id;
+      if (snappedId && locationUserMap[snappedId]) {
+        locationUserMap[snappedId].users.push(user);
+      }
+    });
+
+    // If current user is snapped, add them too
+    if (snappedLocation && currentUserProfile) {
+      const existing = locationUserMap[snappedLocation.id];
+      if (existing && !existing.users.some(u => u.user_id === currentUserProfile.id)) {
+        // We'll represent current user in the count
+        existing.count += 1;
+      }
+    }
+
+    return locationUserMap;
+  }, [onlineUsers, snappedLocation, currentUserProfile]);
+
+  // Update location markers with user count badges
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -261,28 +316,62 @@ export default function MapView() {
     mockLocations.forEach((location) => {
       if (!map.current) return;
 
+      const usersData = usersAtLocations[location.id];
+      const userCount = usersData?.users.length || 0;
+      const totalCount = userCount + (location.user_count || 0);
+
       const el = document.createElement('div');
       el.className = 'location-marker';
       el.style.cssText = `
-        width: 28px;
-        height: 28px;
+        width: 40px;
+        height: 52px;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
         cursor: pointer;
+        z-index: 100;
       `;
 
       const inner = document.createElement('div');
       inner.style.cssText = `
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         background: #3b82f6;
         border: 2px solid #ffffff;
-        border-radius: 4px;
+        border-radius: 6px;
         transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      // Add location icon inside
+      inner.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
       `;
 
       el.appendChild(inner);
+
+      // Add user count badge if there are users
+      if (totalCount > 0) {
+        const badge = document.createElement('div');
+        badge.style.cssText = `
+          background: #ef4444;
+          color: white;
+          font-size: 10px;
+          font-weight: 600;
+          padding: 1px 5px;
+          border-radius: 8px;
+          margin-top: 2px;
+          min-width: 16px;
+          text-align: center;
+          border: 1px solid #0a0a0a;
+        `;
+        badge.textContent = totalCount.toString();
+        el.appendChild(badge);
+      }
 
       el.addEventListener('mouseenter', () => {
         inner.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
@@ -295,20 +384,25 @@ export default function MapView() {
       });
 
       el.addEventListener('click', () => {
-        setSelectedLocation(location);
+        // Show users drawer if there are users, otherwise regular location drawer
+        if (totalCount > 0) {
+          setSelectedLocationForUsers(location);
+        } else {
+          setSelectedLocation(location);
+        }
       });
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([location.lng, location.lat])
         .addTo(map.current!);
 
       locationMarkersRef.current.push(marker);
     });
-  }, [mapLoaded]);
+  }, [mapLoaded, usersAtLocations]);
 
-  // Add/update user location marker (current user's profile photo)
+  // Add/update user location marker (current user's profile photo at display position)
   useEffect(() => {
-    if (!map.current || !position || !mapLoaded) return;
+    if (!map.current || !displayPosition || !mapLoaded) return;
 
     // Remove existing marker
     if (userLocationMarker.current) {
@@ -365,7 +459,7 @@ export default function MapView() {
     el.appendChild(ring);
     el.appendChild(inner);
 
-    // Add "You" label below
+    // Add "You" label below - show location name if snapped, otherwise fuzz distance
     const label = document.createElement('div');
     label.style.cssText = `
       position: absolute;
@@ -380,14 +474,23 @@ export default function MapView() {
       border-radius: 4px;
       white-space: nowrap;
       pointer-events: none;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     `;
-    label.textContent = 'You';
+    if (snappedLocation) {
+      label.textContent = `@ ${snappedLocation.name}`;
+    } else if (locationAccuracy > 0) {
+      label.textContent = `You (~${locationAccuracy}m)`;
+    } else {
+      label.textContent = 'You';
+    }
     el.appendChild(label);
 
     userLocationMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
-      .setLngLat([position.lng, position.lat])
+      .setLngLat([displayPosition.lng, displayPosition.lat])
       .addTo(map.current);
-  }, [position, mapLoaded, currentUserProfile]);
+  }, [displayPosition, mapLoaded, currentUserProfile, locationAccuracy, snappedLocation]);
 
   const handleFindMyLocation = async () => {
     setIsLocating(true);
@@ -478,7 +581,10 @@ export default function MapView() {
         {/* Filter button */}
         <div className="relative">
           <button
-            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            onClick={() => {
+              setShowFilterMenu(!showFilterMenu);
+              setShowMapMenu(false);
+            }}
             className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
               intentFilter !== 'all'
                 ? 'bg-hole-accent text-white'
@@ -512,6 +618,65 @@ export default function MapView() {
           )}
         </div>
 
+        {/* Map menu button */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowMapMenu(!showMapMenu);
+              setShowFilterMenu(false);
+            }}
+            className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
+              showMapMenu
+                ? 'bg-hole-accent text-white'
+                : 'bg-hole-surface hover:bg-hole-border'
+            }`}
+            aria-label="Map menu"
+          >
+            <MenuIcon className="w-5 h-5" />
+          </button>
+
+          {/* Map menu dropdown */}
+          {showMapMenu && (
+            <div className="absolute right-0 mt-2 w-56 bg-hole-surface border border-hole-border rounded-lg shadow-xl overflow-hidden z-10">
+              {/* Add Location option */}
+              <button
+                onClick={() => {
+                  setIsAddLocationModalOpen(true);
+                  setShowMapMenu(false);
+                }}
+                className="w-full px-4 py-3 text-left text-sm transition-colors text-white hover:bg-hole-border flex items-center gap-3"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add Location
+              </button>
+
+              {/* Divider */}
+              <div className="border-t border-hole-border" />
+
+              {/* Location Accuracy section */}
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-white">Location Accuracy</span>
+                  <span className="text-xs text-hole-muted">{locationAccuracy}m</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  step="25"
+                  value={locationAccuracy}
+                  onChange={(e) => setLocationAccuracy(Number(e.target.value))}
+                  className="w-full h-2 bg-hole-border rounded-lg appearance-none cursor-pointer accent-hole-accent"
+                />
+                <div className="flex justify-between text-xs text-hole-muted mt-1">
+                  <span>Exact</span>
+                  <span>200m</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Heatmap toggle */}
         <button
           onClick={toggleViewMode}
@@ -526,7 +691,7 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* Bottom right buttons - stacked vertically */}
+      {/* Bottom right buttons */}
       <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-10">
         {/* Location button */}
         <button
@@ -542,15 +707,6 @@ export default function MapView() {
           aria-label="Find my location"
         >
           <NavigationIcon className="w-5 h-5" />
-        </button>
-
-        {/* Add location button */}
-        <button
-          onClick={() => setIsAddLocationModalOpen(true)}
-          className="p-3 bg-hole-accent hover:bg-red-600 text-white rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
-          aria-label="Add location"
-        >
-          <PlusIcon className="w-5 h-5" />
         </button>
       </div>
 
@@ -579,6 +735,17 @@ export default function MapView() {
         <LocationDrawer
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
+        />
+      )}
+
+      {/* Location users drawer */}
+      {selectedLocationForUsers && (
+        <LocationUsersDrawer
+          location={selectedLocationForUsers}
+          usersAtLocation={usersAtLocations[selectedLocationForUsers.id]}
+          currentUserId={currentUserProfile?.id}
+          isCurrentUserSnapped={snappedLocation?.id === selectedLocationForUsers.id}
+          onClose={() => setSelectedLocationForUsers(null)}
         />
       )}
     </div>

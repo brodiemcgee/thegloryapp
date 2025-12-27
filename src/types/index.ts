@@ -106,4 +106,5 @@ export interface AppSettings {
   push_notifications: boolean;
   ghost_mode: boolean;
   hide_from_contacts: boolean;
+  location_accuracy: number; // 0-200 meters, how much to fuzz location for privacy
 }

@@ -17,6 +17,7 @@ export interface PresenceUser {
     lat: number;
     lng: number;
   };
+  snapped_to_location_id?: string; // ID of location user is snapped to (within 25m)
   intent?: string;
   availability?: string;
   online_at: string;

@@ -2,6 +2,7 @@
 
 import { point } from '@turf/helpers';
 import distance from '@turf/distance';
+import { Location } from '@/types';
 
 export interface GeoPoint {
   lat: number;
@@ -65,4 +66,81 @@ export function sortByDistance<T extends { location?: GeoPoint }>(
       distance_km: calculateDistance(item.location!, centerPoint),
     }))
     .sort((a, b) => a.distance_km - b.distance_km);
+}
+
+// Session-based random values for consistent offset during a session
+let sessionAngle: number | null = null;
+let sessionDistanceFactor: number | null = null;
+
+/**
+ * Generate session-consistent random values
+ * These stay the same for the entire browser session
+ */
+function getSessionRandomValues(): { angle: number; distanceFactor: number } {
+  if (sessionAngle === null || sessionDistanceFactor === null) {
+    sessionAngle = Math.random() * 2 * Math.PI;
+    sessionDistanceFactor = Math.random();
+  }
+  return { angle: sessionAngle, distanceFactor: sessionDistanceFactor };
+}
+
+/**
+ * Offset a location by a random amount within a given radius for privacy
+ * The offset is consistent within a browser session (marker won't jump around)
+ * @param position Original position with lat/lng
+ * @param radiusMeters Maximum radius to offset by (0-200m)
+ * @returns New position offset by a random but consistent amount
+ */
+export function offsetLocation(
+  position: GeoPoint,
+  radiusMeters: number
+): GeoPoint {
+  if (radiusMeters <= 0) return position;
+
+  const { angle, distanceFactor } = getSessionRandomValues();
+  const distance = distanceFactor * radiusMeters;
+
+  // Convert meters to approximate degrees
+  // 1 degree latitude = ~111,320 meters
+  // 1 degree longitude varies by latitude
+  const metersPerDegreeLat = 111320;
+  const metersPerDegreeLng = 111320 * Math.cos(position.lat * Math.PI / 180);
+
+  const offsetLat = (distance * Math.cos(angle)) / metersPerDegreeLat;
+  const offsetLng = (distance * Math.sin(angle)) / metersPerDegreeLng;
+
+  return {
+    lat: position.lat + offsetLat,
+    lng: position.lng + offsetLng,
+  };
+}
+
+/**
+ * Find the nearest verified location within a given distance threshold
+ * @param position User's current position
+ * @param locations Array of locations to check
+ * @param maxDistanceMeters Maximum distance in meters to consider (default 25m)
+ * @returns The nearest verified location within threshold, or null if none found
+ */
+export function findNearestLocation(
+  position: GeoPoint,
+  locations: Location[],
+  maxDistanceMeters: number = 25
+): Location | null {
+  const verifiedLocations = locations.filter(l => l.is_verified);
+
+  let nearestLocation: Location | null = null;
+  let nearestDistance = Infinity;
+
+  for (const location of verifiedLocations) {
+    const distanceKm = calculateDistance(position, { lat: location.lat, lng: location.lng });
+    const distanceMeters = distanceKm * 1000;
+
+    if (distanceMeters <= maxDistanceMeters && distanceMeters < nearestDistance) {
+      nearestDistance = distanceMeters;
+      nearestLocation = location;
+    }
+  }
+
+  return nearestLocation;
 }

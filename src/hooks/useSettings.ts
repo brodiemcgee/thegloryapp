@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   push_notifications: true,
   ghost_mode: false,
   hide_from_contacts: false,
+  location_accuracy: 100, // Default 100m fuzz for privacy
 };
 
 const STORAGE_KEY = 'thehole_settings';
@@ -47,6 +48,7 @@ export function useSettings() {
   const toggleSfwMode = () => updateSettings({ sfw_mode: !settings.sfw_mode });
   const toggleLocation = () => updateSettings({ location_enabled: !settings.location_enabled });
   const toggleGhostMode = () => updateSettings({ ghost_mode: !settings.ghost_mode });
+  const setLocationAccuracy = (meters: number) => updateSettings({ location_accuracy: Math.max(0, Math.min(200, meters)) });
 
   return {
     settings,
@@ -55,6 +57,8 @@ export function useSettings() {
     toggleSfwMode,
     toggleLocation,
     toggleGhostMode,
+    setLocationAccuracy,
     isSfw: settings.sfw_mode,
+    locationAccuracy: settings.location_accuracy,
   };
 }
