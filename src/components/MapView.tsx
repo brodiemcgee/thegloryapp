@@ -99,10 +99,13 @@ export default function MapView() {
   // Memoized to prevent marker flickering from unnecessary re-renders
   const filteredUsers = useMemo(() => {
     const dbUserIds = new Set(dbUsers.map(u => u.id));
-    const filteredMockUsers = mockUsers.filter(u => !dbUserIds.has(u.id));
-    const sourceUsers = [...dbUsers, ...filteredMockUsers];
+    // Mock users always show (for demo) - don't filter by distance
+    const filteredMockUsers = mockUsers
+      .filter(u => !dbUserIds.has(u.id))
+      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
 
-    return sourceUsers.filter((user) => {
+    // DB users are filtered by distance
+    const filteredDbUsers = dbUsers.filter((user) => {
       // Filter by location if position available
       if (position && user.location) {
         if (!isWithinRadius(user.location, position, DEFAULT_RADIUS_KM)) {
@@ -115,6 +118,8 @@ export default function MapView() {
       }
       return true;
     });
+
+    return [...filteredDbUsers, ...filteredMockUsers];
   }, [position, intentFilter, dbUsers]);
 
   // Initialize map

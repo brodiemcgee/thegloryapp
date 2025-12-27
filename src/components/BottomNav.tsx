@@ -1,10 +1,10 @@
-// Bottom navigation bar - 4 tabs: Map, Grid, Messages, Me
+// Bottom navigation bar - 5 tabs: Map, Grid, Messages, Health, Me
 
 'use client';
 
-import { MapIcon, GridIcon, MessageIcon, UserIcon } from './icons';
+import { MapIcon, GridIcon, MessageIcon, HealthIcon, UserIcon } from './icons';
 
-type Tab = 'map' | 'grid' | 'messages' | 'me';
+type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -15,6 +15,7 @@ const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ className?: st
   { id: 'map', label: 'Map', Icon: MapIcon },
   { id: 'grid', label: 'Grid', Icon: GridIcon },
   { id: 'messages', label: 'Messages', Icon: MessageIcon },
+  { id: 'health', label: 'Health', Icon: HealthIcon },
   { id: 'me', label: 'Me', Icon: UserIcon },
 ];
 

@@ -7,9 +7,10 @@ import BottomNav from '@/components/BottomNav';
 import MapView from '@/components/MapView';
 import GridView from '@/components/GridView';
 import MessagesView from '@/components/MessagesView';
+import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
 
-type Tab = 'map' | 'grid' | 'messages' | 'me';
+type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('map');
@@ -22,6 +23,8 @@ export default function Home() {
         return <GridView />;
       case 'messages':
         return <MessagesView />;
+      case 'health':
+        return <HealthView />;
       case 'me':
         return <ProfileView />;
       default:
