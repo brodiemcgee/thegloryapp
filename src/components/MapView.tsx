@@ -391,12 +391,8 @@ export default function MapView() {
       });
 
       el.addEventListener('click', () => {
-        // Show users drawer if there are users, otherwise regular location drawer
-        if (totalCount > 0) {
-          setSelectedLocationForUsers(location);
-        } else {
-          setSelectedLocation(location);
-        }
+        // Always show users drawer for locations
+        setSelectedLocationForUsers(location);
       });
 
       const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
