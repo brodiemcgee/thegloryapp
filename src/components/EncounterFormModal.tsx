@@ -4,7 +4,9 @@
 
 import { useState } from 'react';
 import { XIcon } from './icons';
-import { ACTIVITY_OPTIONS, LOCATION_OPTIONS, EXPERIENCE_TAG_OPTIONS } from './ManualEncounterModal';
+import { ACTIVITY_OPTIONS, EXPERIENCE_TAG_OPTIONS } from './ManualEncounterModal';
+import LocationPicker from './LocationPicker';
+import { LocationData } from '@/hooks/useSavedLocations';
 
 interface EncounterFormModalProps {
   onClose: () => void;
@@ -15,6 +17,9 @@ interface EncounterFormModalProps {
     activities?: string[];
     experience_tags?: string[];
     location_type?: string;
+    location_lat?: number;
+    location_lng?: number;
+    location_address?: string;
     protection_used?: 'yes' | 'no' | 'partial';
   }) => Promise<void>;
   username?: string; // Optional - for displaying who the encounter is with
@@ -32,7 +37,7 @@ export default function EncounterFormModal({
   const [notes, setNotes] = useState('');
   const [activities, setActivities] = useState<string[]>([]);
   const [experienceTags, setExperienceTags] = useState<string[]>([]);
-  const [locationType, setLocationType] = useState<string>('');
+  const [location, setLocation] = useState<LocationData | null>(null);
   const [protectionUsed, setProtectionUsed] = useState<'yes' | 'no' | 'partial' | ''>('');
   const [saving, setSaving] = useState(false);
 
@@ -63,7 +68,10 @@ export default function EncounterFormModal({
         rating: rating || undefined,
         activities: activities.length > 0 ? activities : undefined,
         experience_tags: experienceTags.length > 0 ? experienceTags : undefined,
-        location_type: locationType || undefined,
+        location_type: location?.name || undefined,
+        location_lat: location?.lat && location.lat !== 0 ? location.lat : undefined,
+        location_lng: location?.lng && location.lng !== 0 ? location.lng : undefined,
+        location_address: location?.address || undefined,
         protection_used: protectionUsed || undefined,
       });
       onClose();
@@ -182,23 +190,8 @@ export default function EncounterFormModal({
 
         {/* Location */}
         <div>
-          <label className="text-sm text-hole-muted mb-2 block">Where? (optional)</label>
-          <div className="flex flex-wrap gap-2">
-            {LOCATION_OPTIONS.map((loc) => (
-              <button
-                key={loc.id}
-                type="button"
-                onClick={() => setLocationType(locationType === loc.id ? '' : loc.id)}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  locationType === loc.id
-                    ? 'bg-hole-accent text-white'
-                    : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
-                }`}
-              >
-                {loc.label}
-              </button>
-            ))}
-          </div>
+          <label className="text-sm text-hole-muted mb-2 block">Where?</label>
+          <LocationPicker value={location} onChange={setLocation} />
         </div>
 
         {/* Protection */}

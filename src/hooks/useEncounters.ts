@@ -16,6 +16,9 @@ export interface Encounter {
   activities: string[] | null;
   experience_tags: string[] | null;
   location_type: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_address: string | null;
   protection_used: 'yes' | 'no' | 'partial' | null;
   created_at: string;
   // Joined profile data for app users
@@ -239,7 +242,10 @@ export function useEncounters() {
     activities?: string[],
     locationType?: string,
     protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[]
+    experienceTags?: string[],
+    locationLat?: number,
+    locationLng?: number,
+    locationAddress?: string
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -256,6 +262,9 @@ export function useEncounters() {
         activities: activities || null,
         experience_tags: experienceTags || null,
         location_type: locationType || null,
+        location_lat: locationLat || null,
+        location_lng: locationLng || null,
+        location_address: locationAddress || null,
         protection_used: protectionUsed || null,
       })
       .select()
@@ -272,7 +281,7 @@ export function useEncounters() {
   // Update an encounter
   const updateEncounter = async (
     id: string,
-    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name' | 'activities' | 'experience_tags' | 'location_type' | 'protection_used'>>
+    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name' | 'activities' | 'experience_tags' | 'location_type' | 'location_lat' | 'location_lng' | 'location_address' | 'protection_used'>>
   ) => {
     if (!user) throw new Error('Not authenticated');
 

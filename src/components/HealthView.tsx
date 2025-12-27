@@ -83,9 +83,12 @@ export default function HealthView() {
     activities?: string[],
     locationType?: string,
     protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[]
+    experienceTags?: string[],
+    locationLat?: number,
+    locationLng?: number,
+    locationAddress?: string
   ) => {
-    await addManualEncounter(metAt, name, rating, notes, activities, locationType, protectionUsed, experienceTags);
+    await addManualEncounter(metAt, name, rating, notes, activities, locationType, protectionUsed, experienceTags, locationLat, locationLng, locationAddress);
   };
 
   return (

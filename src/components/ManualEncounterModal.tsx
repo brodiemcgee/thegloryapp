@@ -4,6 +4,8 @@
 
 import { useState } from 'react';
 import { XIcon } from './icons';
+import LocationPicker from './LocationPicker';
+import { LocationData } from '@/hooks/useSavedLocations';
 
 // Activity types for encounter logging
 export const ACTIVITY_OPTIONS = [
@@ -59,7 +61,10 @@ interface ManualEncounterModalProps {
     activities?: string[],
     locationType?: string,
     protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[]
+    experienceTags?: string[],
+    locationLat?: number,
+    locationLng?: number,
+    locationAddress?: string
   ) => Promise<void>;
 }
 
@@ -73,7 +78,7 @@ export default function ManualEncounterModal({
   const [notes, setNotes] = useState('');
   const [activities, setActivities] = useState<string[]>([]);
   const [experienceTags, setExperienceTags] = useState<string[]>([]);
-  const [locationType, setLocationType] = useState<string>('');
+  const [location, setLocation] = useState<LocationData | null>(null);
   const [protectionUsed, setProtectionUsed] = useState<'yes' | 'no' | 'partial' | ''>('');
   const [saving, setSaving] = useState(false);
 
@@ -104,9 +109,12 @@ export default function ManualEncounterModal({
         rating || undefined,
         notes.trim() || undefined,
         activities.length > 0 ? activities : undefined,
-        locationType || undefined,
+        location?.name || undefined,
         protectionUsed || undefined,
-        experienceTags.length > 0 ? experienceTags : undefined
+        experienceTags.length > 0 ? experienceTags : undefined,
+        location?.lat && location.lat !== 0 ? location.lat : undefined,
+        location?.lng && location.lng !== 0 ? location.lng : undefined,
+        location?.address || undefined
       );
       onClose();
     } catch (err) {
@@ -229,23 +237,8 @@ export default function ManualEncounterModal({
 
         {/* Location */}
         <div>
-          <label className="text-sm text-hole-muted mb-2 block">Where? (optional)</label>
-          <div className="flex flex-wrap gap-2">
-            {LOCATION_OPTIONS.map((loc) => (
-              <button
-                key={loc.id}
-                type="button"
-                onClick={() => setLocationType(locationType === loc.id ? '' : loc.id)}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  locationType === loc.id
-                    ? 'bg-hole-accent text-white'
-                    : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
-                }`}
-              >
-                {loc.label}
-              </button>
-            ))}
-          </div>
+          <label className="text-sm text-hole-muted mb-2 block">Where?</label>
+          <LocationPicker value={location} onChange={setLocation} />
         </div>
 
         {/* Protection */}
