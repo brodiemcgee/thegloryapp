@@ -102,26 +102,44 @@ export default function ProfileView() {
     setEditNameValue('');
   };
 
-  // Load photos from database when user is authenticated
+  // Load profile and photos from database when user is authenticated
   useEffect(() => {
     if (!authUser) return;
 
-    const loadPhotos = async () => {
+    const loadProfile = async () => {
       try {
-        const { data, error } = await supabase
+        // Load profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, display_name, bio, is_verified, verified_at')
+          .eq('id', authUser.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error loading profile:', profileError);
+        } else if (profileData) {
+          setUser((prev) => ({
+            ...prev,
+            username: profileData.username,
+            display_name: profileData.display_name,
+            bio: profileData.bio,
+            is_verified: profileData.is_verified,
+            verified_at: profileData.verified_at,
+          }));
+        }
+
+        // Load photos
+        const { data: photosData, error: photosError } = await supabase
           .from('photos')
           .select('*')
           .eq('profile_id', authUser.id)
           .order('created_at', { ascending: true });
 
-        if (error) {
-          console.error('Error loading photos:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const photoUrls = data.map((photo) => photo.url);
-          const primaryPhoto = data.find((p) => p.is_primary) || data[0];
+        if (photosError) {
+          console.error('Error loading photos:', photosError);
+        } else if (photosData && photosData.length > 0) {
+          const photoUrls = photosData.map((photo) => photo.url);
+          const primaryPhoto = photosData.find((p) => p.is_primary) || photosData[0];
           setUser((prev) => ({
             ...prev,
             photos: photoUrls,
@@ -129,11 +147,11 @@ export default function ProfileView() {
           }));
         }
       } catch (err) {
-        console.error('Failed to load photos:', err);
+        console.error('Failed to load profile:', err);
       }
     };
 
-    loadPhotos();
+    loadProfile();
   }, [authUser]);
 
   if (showDetailsEditor) {
