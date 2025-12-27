@@ -15,7 +15,7 @@ import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
 import UserProfile from './UserProfile';
 import { Location, User, Intent } from '@/types';
-import { calculateDistance, isWithinRadius, offsetLocation, findNearestLocation } from '@/lib/geo';
+import { calculateDistance, offsetLocation, findNearestLocation } from '@/lib/geo';
 import { useSettings } from '@/hooks/useSettings';
 import LocationUsersDrawer from './LocationUsersDrawer';
 
@@ -95,33 +95,6 @@ export default function MapView() {
     }
   }, [displayPosition, snappedLocation, updatePresence]);
 
-  // Combine real DB users with mock users for demo
-  // Memoized to prevent marker flickering from unnecessary re-renders
-  const filteredUsers = useMemo(() => {
-    const dbUserIds = new Set(dbUsers.map(u => u.id));
-    // Mock users always show (for demo) - don't filter by distance
-    const filteredMockUsers = mockUsers
-      .filter(u => !dbUserIds.has(u.id))
-      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
-
-    // DB users are filtered by distance
-    const filteredDbUsers = dbUsers.filter((user) => {
-      // Filter by location if position available
-      if (position && user.location) {
-        if (!isWithinRadius(user.location, position, DEFAULT_RADIUS_KM)) {
-          return false;
-        }
-      }
-      // Filter by intent
-      if (intentFilter !== 'all' && user.intent !== intentFilter) {
-        return false;
-      }
-      return true;
-    });
-
-    return [...filteredDbUsers, ...filteredMockUsers];
-  }, [position, intentFilter, dbUsers]);
-
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -167,7 +140,23 @@ export default function MapView() {
     }
   };
 
-  // Update user markers based on view mode and filtered users
+  // Get users to display on map (stable reference for markers)
+  // Only include users with locations, filtered by intent
+  const usersForMarkers = useMemo(() => {
+    const dbUserIds = new Set(dbUsers.map(u => u.id));
+    const filteredMockUsers = mockUsers
+      .filter(u => !dbUserIds.has(u.id))
+      .filter(u => u.location)
+      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
+
+    const filteredDbUsers = dbUsers
+      .filter(u => u.location)
+      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
+
+    return [...filteredDbUsers, ...filteredMockUsers];
+  }, [intentFilter, dbUsers]); // Note: position is NOT a dependency - markers don't move with GPS
+
+  // Update user markers based on view mode and users
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -176,7 +165,7 @@ export default function MapView() {
     userMarkersRef.current = [];
 
     if (viewMode === 'users') {
-      filteredUsers.forEach((user) => {
+      usersForMarkers.forEach((user) => {
         if (!user.location || !map.current) return;
 
         const ringColor = getIntentColor(user.intent);
@@ -281,7 +270,7 @@ export default function MapView() {
         userMarkersRef.current.push(marker);
       });
     }
-  }, [viewMode, filteredUsers, mapLoaded]);
+  }, [viewMode, usersForMarkers, mapLoaded]);
 
   // Calculate users at each location (from nearby users + presence data)
   const usersAtLocations = useMemo(() => {
@@ -295,8 +284,8 @@ export default function MapView() {
       locationUserMap[loc.id] = { presenceUsers: [], nearbyUsers: [] };
     });
 
-    // Find nearby users (within 50m of each location) from filteredUsers
-    filteredUsers.forEach(user => {
+    // Find nearby users (within 50m of each location) from usersForMarkers
+    usersForMarkers.forEach(user => {
       if (!user.location) return;
 
       mockLocations.forEach(loc => {
@@ -316,7 +305,7 @@ export default function MapView() {
     });
 
     return locationUserMap;
-  }, [onlineUsers, filteredUsers]);
+  }, [onlineUsers, usersForMarkers]);
 
   // Get icon SVG based on location type
   const getLocationIcon = (type: Location['type']): string => {
@@ -589,16 +578,16 @@ export default function MapView() {
     // For now, just log it
   };
 
-  // Prepare heatmap points from filtered users (memoized)
+  // Prepare heatmap points from users (memoized)
   const heatmapPoints = useMemo(() => {
-    return filteredUsers
+    return usersForMarkers
       .filter((user) => user.location)
       .map((user) => ({
         lat: user.location!.lat,
         lng: user.location!.lng,
         weight: user.is_online ? 2 : 1,
       }));
-  }, [filteredUsers]);
+  }, [usersForMarkers]);
 
   return (
     <div className="relative h-full w-full">
@@ -774,7 +763,7 @@ export default function MapView() {
       {/* View mode indicator */}
       <div className="absolute top-4 left-4 flex flex-col gap-2">
         <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm">
-          {viewMode === 'users' ? `Users (${filteredUsers.length})` : 'Heatmap'}
+          {viewMode === 'users' ? `Users (${usersForMarkers.length})` : 'Heatmap'}
         </div>
         {isConnected && (
           <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm flex items-center gap-2">

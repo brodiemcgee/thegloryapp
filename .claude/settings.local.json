@@ -45,7 +45,8 @@
       "Bash(git checkout:*)",
       "Bash(gh auth:*)",
       "Bash(GIT_TERMINAL_PROMPT=0 git push:*)",
-      "WebFetch(domain:www.hookbook.app)"
+      "WebFetch(domain:www.hookbook.app)",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)"
     ]
   },
   "enableAllProjectMcpServers": true,
