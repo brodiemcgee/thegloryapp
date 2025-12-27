@@ -107,22 +107,17 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
         )}
       </div>
 
-      {/* Bottom gradient overlay with name and distance */}
+      {/* Bottom gradient overlay with distance and name */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 pt-8">
-        <div className="flex items-end justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            <span className="font-semibold text-sm text-white truncate block drop-shadow-md">
-              {user.display_name || user.username}
-            </span>
-            {user.age && (
-              <span className="text-xs text-white/80 drop-shadow-md">{user.age}</span>
-            )}
-          </div>
+        <div className="min-w-0">
           {user.distance_km !== undefined && (
-            <span className="text-xs text-white/80 drop-shadow-md flex-shrink-0">
+            <span className="text-xs text-white/70 drop-shadow-md block">
               {formatDistance(user.distance_km)}
             </span>
           )}
+          <span className="font-semibold text-sm text-white truncate block drop-shadow-md">
+            {user.display_name || user.username}
+          </span>
         </div>
       </div>
     </button>
