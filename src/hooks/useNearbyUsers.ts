@@ -48,12 +48,92 @@ export function useNearbyUsers(
   const { radiusKm = 10, intentFilter = 'all' } = options;
   const { user: authUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUserProfile, setCurrentUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     fetchUsers();
+    if (authUser) {
+      fetchCurrentUserProfile();
+    }
   }, [authUser]);
+
+  // Fetch current user's profile separately to ensure it's always available
+  const fetchCurrentUserProfile = async () => {
+    if (!authUser) return;
+
+    try {
+      const { data, error: dbError } = await supabase
+        .from('profiles')
+        .select(`
+          id, username, avatar_url, bio, age, intent, availability,
+          is_verified, is_online, last_active, location, ghost_mode,
+          height_cm, weight_kg, body_type, ethnicity, position,
+          host_travel, smoker, drugs, safer_sex, hiv_status,
+          instagram_handle, twitter_handle, looking_for, kinks,
+          photos (id, url, is_primary, is_nsfw)
+        `)
+        .eq('id', authUser.id)
+        .single();
+
+      if (dbError) {
+        console.error('Failed to fetch current user profile:', dbError);
+        return;
+      }
+
+      if (data) {
+        const profile = transformProfile(data);
+        setCurrentUserProfile(profile);
+      }
+    } catch (err) {
+      console.error('Error fetching current user profile:', err);
+    }
+  };
+
+  // Transform a database profile to User type
+  const transformProfile = (profile: DbProfile): User => {
+    let location: { lat: number; lng: number } | undefined;
+    if (profile.location && typeof profile.location === 'object' && 'coordinates' in profile.location) {
+      const coords = profile.location as { coordinates: [number, number] };
+      location = {
+        lng: coords.coordinates[0],
+        lat: coords.coordinates[1],
+      };
+    }
+
+    const primaryPhoto = profile.photos?.find(p => p.is_primary);
+    const avatarUrl = profile.avatar_url || primaryPhoto?.url || profile.photos?.[0]?.url || null;
+
+    return {
+      id: profile.id,
+      username: profile.username,
+      avatar_url: avatarUrl,
+      bio: profile.bio || undefined,
+      age: profile.age || undefined,
+      intent: profile.intent || 'chatting',
+      availability: (profile.availability as User['availability']) || 'offline',
+      is_verified: profile.is_verified,
+      is_online: profile.is_online,
+      last_active: profile.last_active,
+      location,
+      photos: profile.photos?.map(p => p.url) || [],
+      height_cm: profile.height_cm || undefined,
+      weight_kg: profile.weight_kg || undefined,
+      body_type: profile.body_type as User['body_type'],
+      ethnicity: profile.ethnicity || undefined,
+      position: profile.position as User['position'],
+      host_travel: profile.host_travel as User['host_travel'],
+      smoker: profile.smoker as User['smoker'],
+      drugs: profile.drugs as User['drugs'],
+      safer_sex: profile.safer_sex as User['safer_sex'],
+      hiv_status: profile.hiv_status as User['hiv_status'],
+      instagram_handle: profile.instagram_handle || undefined,
+      twitter_handle: profile.twitter_handle || undefined,
+      looking_for: profile.looking_for as User['looking_for'],
+      kinks: profile.kinks || undefined,
+    };
+  };
 
   const fetchUsers = async () => {
     try {
@@ -99,49 +179,7 @@ export function useNearbyUsers(
       if (dbError) throw dbError;
 
       // Transform database profiles to User type
-      const transformedUsers: User[] = (data || []).map((profile: DbProfile) => {
-        // Extract coordinates from PostGIS geography
-        let location: { lat: number; lng: number } | undefined;
-        if (profile.location && profile.location.coordinates) {
-          location = {
-            lng: profile.location.coordinates[0],
-            lat: profile.location.coordinates[1],
-          };
-        }
-
-        // Get primary photo or first photo as avatar
-        const primaryPhoto = profile.photos?.find(p => p.is_primary);
-        const avatarUrl = profile.avatar_url || primaryPhoto?.url || profile.photos?.[0]?.url || null;
-
-        return {
-          id: profile.id,
-          username: profile.username,
-          avatar_url: avatarUrl,
-          bio: profile.bio || undefined,
-          age: profile.age || undefined,
-          intent: profile.intent || 'chatting',
-          availability: (profile.availability as User['availability']) || 'offline',
-          is_verified: profile.is_verified,
-          is_online: profile.is_online,
-          last_active: profile.last_active,
-          location,
-          photos: profile.photos?.map(p => p.url) || [],
-          height_cm: profile.height_cm || undefined,
-          weight_kg: profile.weight_kg || undefined,
-          body_type: profile.body_type as User['body_type'],
-          ethnicity: profile.ethnicity || undefined,
-          position: profile.position as User['position'],
-          host_travel: profile.host_travel as User['host_travel'],
-          smoker: profile.smoker as User['smoker'],
-          drugs: profile.drugs as User['drugs'],
-          safer_sex: profile.safer_sex as User['safer_sex'],
-          hiv_status: profile.hiv_status as User['hiv_status'],
-          instagram_handle: profile.instagram_handle || undefined,
-          twitter_handle: profile.twitter_handle || undefined,
-          looking_for: profile.looking_for as User['looking_for'],
-          kinks: profile.kinks || undefined,
-        };
-      });
+      const transformedUsers: User[] = (data || []).map((profile: DbProfile) => transformProfile(profile));
 
       setUsers(transformedUsers);
     } catch (err) {
@@ -186,11 +224,6 @@ export function useNearbyUsers(
     return result;
   }, [users, userPosition, radiusKm, intentFilter]);
 
-  // Get current user's profile
-  const currentUserProfile = useMemo(() => {
-    if (!authUser) return null;
-    return users.find(u => u.id === authUser.id) || null;
-  }, [users, authUser]);
 
   return {
     users: filteredUsers,
