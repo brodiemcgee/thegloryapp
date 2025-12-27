@@ -4,34 +4,38 @@
 
 import { useState, useMemo } from 'react';
 import { mockUsers, currentUser } from '@/data/mockData';
-import { User, Intent } from '@/types';
-import { FilterIcon, GridIcon, CheckIcon } from './icons';
+import { User } from '@/types';
+import { GridIcon } from './icons';
 import UserCard from './UserCard';
 import UserProfile from './UserProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
+import { useFavorites } from '@/hooks/useFavorites';
 import { calculateDistance } from '@/lib/geo';
+import FilterBar, { FilterState, defaultFilters } from './FilterBar';
 
 type SortOption = 'distance' | 'active';
-type FilterOption = Intent | 'all';
 
 export default function GridView() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<SortOption>('distance');
-  const [intentFilter, setIntentFilter] = useState<FilterOption>('all');
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { position } = useGeolocation();
+  const { favorites } = useFavorites();
 
   // Fetch real users from database
-  const { users: dbUsers, currentUserProfile, loading } = useNearbyUsers(position, {
-    intentFilter,
-  });
+  const { users: dbUsers, currentUserProfile, loading } = useNearbyUsers(position, {});
+
+  // Check if user is active within time threshold
+  const isActiveWithin = (lastActive: string, minutes: number): boolean => {
+    const lastActiveTime = new Date(lastActive).getTime();
+    const now = Date.now();
+    return (now - lastActiveTime) / (1000 * 60) <= minutes;
+  };
 
   const filteredUsers = useMemo(() => {
     // Combine real DB users with mock users for demo
-    // Filter out any mock users that have the same ID as real users
     const dbUserIds = new Set(dbUsers.map(u => u.id));
     const filteredMockUsers = mockUsers.filter(u => !dbUserIds.has(u.id));
     let result = [...dbUsers, ...filteredMockUsers];
@@ -49,14 +53,36 @@ export default function GridView() {
       });
     }
 
-    // Filter by intent
-    if (intentFilter !== 'all') {
-      result = result.filter((u) => u.intent === intentFilter);
+    // Filter by online status
+    if (filters.online === 'online') {
+      result = result.filter((u) => u.last_active && isActiveWithin(u.last_active, 2));
+    } else if (filters.online === 'recent') {
+      result = result.filter((u) => u.last_active && isActiveWithin(u.last_active, 30));
     }
 
-    // Filter verified only
-    if (verifiedOnly) {
-      result = result.filter((u) => u.is_verified);
+    // Filter by favorites
+    if (filters.favorites) {
+      const favoriteIds = new Set(favorites.map(f => f.target_user_id));
+      result = result.filter((u) => favoriteIds.has(u.id));
+    }
+
+    // Filter by intent
+    if (filters.intent !== 'all') {
+      result = result.filter((u) => u.intent === filters.intent);
+    }
+
+    // Filter by age range
+    if (filters.ageRange) {
+      const [minAge, maxAge] = filters.ageRange;
+      result = result.filter((u) => {
+        if (!u.age) return false;
+        return u.age >= minAge && u.age <= maxAge;
+      });
+    }
+
+    // Filter by position
+    if (filters.position !== 'all') {
+      result = result.filter((u) => u.position === filters.position);
     }
 
     // Sort
@@ -68,18 +94,9 @@ export default function GridView() {
 
     // Always show current user first (use db profile if available)
     const currentProfile = currentUserProfile || currentUser;
-    // Remove current user from result if already there
     result = result.filter(u => u.id !== currentProfile.id);
     return [{ ...currentProfile, distance_km: 0 }, ...result];
-  }, [dbUsers, intentFilter, verifiedOnly, sortBy, position, currentUserProfile]);
-
-  const intentOptions: { value: FilterOption; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'looking_now', label: 'Looking Now' },
-    { value: 'looking_later', label: 'Looking Later' },
-    { value: 'chatting', label: 'Chatting' },
-    { value: 'friends', label: 'Friends' },
-  ];
+  }, [dbUsers, filters, sortBy, position, currentUserProfile, favorites]);
 
   if (selectedUser) {
     return <UserProfile user={selectedUser} onBack={() => setSelectedUser(null)} />;
@@ -88,9 +105,18 @@ export default function GridView() {
   return (
     <div className="h-full flex flex-col bg-hole-bg">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-hole-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-hole-border">
         <h1 className="text-lg font-semibold">Nearby</h1>
         <div className="flex items-center gap-2">
+          {/* Sort selector */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="bg-hole-surface text-white text-sm rounded-lg px-2 py-1.5 outline-none border border-hole-border"
+          >
+            <option value="distance">By Distance</option>
+            <option value="active">By Active</option>
+          </select>
           <button
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
             className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
@@ -98,66 +124,11 @@ export default function GridView() {
           >
             <GridIcon className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg transition-colors ${
-              showFilters ? 'bg-hole-accent text-white' : 'hover:bg-hole-surface'
-            }`}
-            aria-label="Toggle filters"
-          >
-            <FilterIcon className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
-      {/* Filters panel */}
-      {showFilters && (
-        <div className="p-4 border-b border-hole-border bg-hole-surface space-y-4">
-          {/* Intent filter */}
-          <div>
-            <label className="text-sm text-hole-muted mb-2 block">Intent</label>
-            <div className="flex flex-wrap gap-2">
-              {intentOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setIntentFilter(opt.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    intentFilter === opt.value
-                      ? 'bg-hole-accent text-white'
-                      : 'bg-hole-border text-gray-300 hover:bg-hole-muted'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sort and verified */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-hole-muted">Sort:</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-hole-border text-white text-sm rounded-lg px-3 py-1.5 outline-none"
-              >
-                <option value="distance">Distance</option>
-                <option value="active">Last active</option>
-              </select>
-            </div>
-            <button
-              onClick={() => setVerifiedOnly(!verifiedOnly)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                verifiedOnly ? 'bg-blue-500 text-white' : 'bg-hole-border text-gray-300'
-              }`}
-            >
-              <CheckIcon className="w-4 h-4" />
-              Verified only
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Filter bar */}
+      <FilterBar filters={filters} onChange={setFilters} />
 
       {/* User grid/list */}
       <div className="flex-1 overflow-auto p-2">

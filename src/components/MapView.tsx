@@ -9,7 +9,7 @@ import { mockUsers, mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
-import { FilterIcon, CrosshairIcon, NavigationIcon, PlusIcon, MenuIcon } from './icons';
+import { NavigationIcon, PlusIcon, MenuIcon } from './icons';
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
@@ -18,20 +18,14 @@ import { Location, User, Intent } from '@/types';
 import { calculateDistance, offsetLocation, findNearestLocation } from '@/lib/geo';
 import { useSettings } from '@/hooks/useSettings';
 import LocationUsersDrawer from './LocationUsersDrawer';
+import FilterBar, { FilterState, defaultFilters } from './FilterBar';
+import { useFavorites } from '@/hooks/useFavorites';
 
 // Set Mapbox token - will use env var in production
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 // Default radius for filtering users (in km)
 const DEFAULT_RADIUS_KM = 10;
-
-const INTENT_OPTIONS: { value: Intent | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'looking_now', label: 'Looking Now' },
-  { value: 'looking_later', label: 'Looking Later' },
-  { value: 'chatting', label: 'Chatting' },
-  { value: 'friends', label: 'Friends' },
-];
 
 export default function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -44,18 +38,17 @@ export default function MapView() {
   const [selectedLocationForUsers, setSelectedLocationForUsers] = useState<Location | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showMapMenu, setShowMapMenu] = useState(false);
-  const [intentFilter, setIntentFilter] = useState<Intent | 'all'>('all');
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [isLocating, setIsLocating] = useState(false);
   const { position, loading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
   const { locationAccuracy, setLocationAccuracy } = useSettings();
+  const { favorites } = useFavorites();
 
   // Fetch real users from database
   const { users: dbUsers, currentUserProfile } = useNearbyUsers(position, {
     radiusKm: DEFAULT_RADIUS_KM,
-    intentFilter,
   });
 
   // Default center (Sydney) - will use user position when available
@@ -139,21 +132,59 @@ export default function MapView() {
     }
   };
 
+  // Check if user is active within time threshold
+  const isActiveWithin = (lastActive: string, minutes: number): boolean => {
+    const lastActiveTime = new Date(lastActive).getTime();
+    const now = Date.now();
+    return (now - lastActiveTime) / (1000 * 60) <= minutes;
+  };
+
   // Get users to display on map (stable reference for markers)
-  // Only include users with locations, filtered by intent
+  // Filtered by all filter criteria
   const usersForMarkers = useMemo(() => {
     const dbUserIds = new Set(dbUsers.map(u => u.id));
-    const filteredMockUsers = mockUsers
-      .filter(u => !dbUserIds.has(u.id))
-      .filter(u => u.location)
-      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
+    const allUsers = [
+      ...dbUsers,
+      ...mockUsers.filter(u => !dbUserIds.has(u.id))
+    ].filter(u => u.location);
 
-    const filteredDbUsers = dbUsers
-      .filter(u => u.location)
-      .filter(u => intentFilter === 'all' || u.intent === intentFilter);
+    // Apply all filters
+    let result = allUsers;
 
-    return [...filteredDbUsers, ...filteredMockUsers];
-  }, [intentFilter, dbUsers]); // Note: position is NOT a dependency - markers don't move with GPS
+    // Filter by online status
+    if (filters.online === 'online') {
+      result = result.filter((u) => u.last_active && isActiveWithin(u.last_active, 2));
+    } else if (filters.online === 'recent') {
+      result = result.filter((u) => u.last_active && isActiveWithin(u.last_active, 30));
+    }
+
+    // Filter by favorites
+    if (filters.favorites) {
+      const favoriteIds = new Set(favorites.map(f => f.target_user_id));
+      result = result.filter((u) => favoriteIds.has(u.id));
+    }
+
+    // Filter by intent
+    if (filters.intent !== 'all') {
+      result = result.filter((u) => u.intent === filters.intent);
+    }
+
+    // Filter by age range
+    if (filters.ageRange) {
+      const [minAge, maxAge] = filters.ageRange;
+      result = result.filter((u) => {
+        if (!u.age) return false;
+        return u.age >= minAge && u.age <= maxAge;
+      });
+    }
+
+    // Filter by position
+    if (filters.position !== 'all') {
+      result = result.filter((u) => u.position === filters.position);
+    }
+
+    return result;
+  }, [filters, dbUsers, favorites]); // Note: position is NOT a dependency - markers don't move with GPS
 
   // Create a marker element for a user (extracted function for reuse)
   // Uses simple CSS without position/z-index on container to avoid Mapbox conflicts
@@ -652,79 +683,40 @@ export default function MapView() {
   }, [usersForMarkers]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full flex flex-col">
+      {/* Filter bar at top */}
+      <FilterBar filters={filters} onChange={setFilters} />
+
       {/* Map container */}
-      <div ref={mapContainer} className="h-full w-full" />
+      <div className="flex-1 relative">
+        <div ref={mapContainer} className="h-full w-full" />
 
-      {/* Heatmap layer */}
-      {viewMode === 'heatmap' && (
-        <MapHeatmap
-          map={map.current}
-          points={heatmapPoints}
-          colors={['rgba(59, 130, 246, 0.6)', 'rgba(139, 92, 246, 0.7)', 'rgba(236, 72, 153, 0.8)', 'rgba(239, 68, 68, 0.9)']}
-          intensity={1.2}
-        />
-      )}
+        {/* Heatmap layer */}
+        {viewMode === 'heatmap' && (
+          <MapHeatmap
+            map={map.current}
+            points={heatmapPoints}
+            colors={['rgba(59, 130, 246, 0.6)', 'rgba(139, 92, 246, 0.7)', 'rgba(236, 72, 153, 0.8)', 'rgba(239, 68, 68, 0.9)']}
+            intensity={1.2}
+          />
+        )}
 
-      {/* No token fallback */}
-      {!MAPBOX_TOKEN && (
-        <div className="absolute inset-0 flex items-center justify-center bg-hole-bg">
-          <div className="text-center p-6">
-            <p className="text-hole-muted mb-2">Map unavailable</p>
-            <p className="text-sm text-hole-muted">Set NEXT_PUBLIC_MAPBOX_TOKEN</p>
-          </div>
-        </div>
-      )}
-
-      {/* Floating controls - right side */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2">
-        {/* Filter button */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowFilterMenu(!showFilterMenu);
-              setShowMapMenu(false);
-            }}
-            className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
-              intentFilter !== 'all'
-                ? 'bg-hole-accent text-white'
-                : 'bg-hole-surface hover:bg-hole-border'
-            }`}
-            aria-label="Filter users"
-          >
-            <FilterIcon className="w-5 h-5" />
-          </button>
-
-          {/* Filter dropdown */}
-          {showFilterMenu && (
-            <div className="absolute right-0 mt-2 w-40 bg-hole-surface border border-hole-border rounded-lg shadow-xl overflow-hidden z-10">
-              {INTENT_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => {
-                    setIntentFilter(option.value);
-                    setShowFilterMenu(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-sm transition-colors ${
-                    intentFilter === option.value
-                      ? 'bg-hole-accent text-white'
-                      : 'text-white hover:bg-hole-border'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+        {/* No token fallback */}
+        {!MAPBOX_TOKEN && (
+          <div className="absolute inset-0 flex items-center justify-center bg-hole-bg">
+            <div className="text-center p-6">
+              <p className="text-hole-muted mb-2">Map unavailable</p>
+              <p className="text-sm text-hole-muted">Set NEXT_PUBLIC_MAPBOX_TOKEN</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Map menu button */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowMapMenu(!showMapMenu);
-              setShowFilterMenu(false);
-            }}
+        {/* Floating controls - right side */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
+          {/* Map menu button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMapMenu(!showMapMenu)}
             className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
               showMapMenu
                 ? 'bg-hole-accent text-white'
@@ -799,40 +791,41 @@ export default function MapView() {
                 </p>
               </div>
             </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom right buttons */}
+        <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-10">
+          {/* Location button */}
+          <button
+            onClick={recenterMap}
+            disabled={isLocating || geoLoading}
+            className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
+              isLocating || geoLoading
+                ? 'bg-hole-accent text-white animate-pulse'
+                : position
+                ? 'bg-hole-surface hover:bg-hole-border'
+                : 'bg-hole-surface hover:bg-hole-accent'
+            }`}
+            aria-label="Find my location"
+          >
+            <NavigationIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* View mode indicator */}
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
+          <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm">
+            {viewMode === 'users' ? `Users (${usersForMarkers.length})` : 'Heatmap'}
+          </div>
+          {isConnected && (
+            <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span>{onlineUsers.length} online</span>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* Bottom right buttons */}
-      <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-10">
-        {/* Location button */}
-        <button
-          onClick={recenterMap}
-          disabled={isLocating || geoLoading}
-          className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
-            isLocating || geoLoading
-              ? 'bg-hole-accent text-white animate-pulse'
-              : position
-              ? 'bg-hole-surface hover:bg-hole-border'
-              : 'bg-hole-surface hover:bg-hole-accent'
-          }`}
-          aria-label="Find my location"
-        >
-          <NavigationIcon className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* View mode indicator */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2">
-        <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm">
-          {viewMode === 'users' ? `Users (${usersForMarkers.length})` : 'Heatmap'}
-        </div>
-        {isConnected && (
-          <div className="px-3 py-1 bg-hole-surface/80 backdrop-blur border border-hole-border rounded-full text-sm flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span>{onlineUsers.length} online</span>
-          </div>
-        )}
       </div>
 
       {/* Add Location Modal */}
