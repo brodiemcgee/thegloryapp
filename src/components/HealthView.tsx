@@ -18,7 +18,7 @@ import { ContactTraceAlerts } from './ContactTraceAlert';
 
 export default function HealthView() {
   const { latestScreen, daysSinceLastTest, addScreen, loading: healthLoading } = useHealthScreens();
-  const { encounters, stats, addManualEncounter, loading: encountersLoading } = useEncounters();
+  const { encounters, stats, addManualEncounter, updateEncounter, deleteEncounter, loading: encountersLoading } = useEncounters();
   const { settings } = useHealthSettings();
   const { notifications, markAsRead } = useContactTracingContext();
   const [showHealthModal, setShowHealthModal] = useState(false);
@@ -321,6 +321,15 @@ export default function HealthView() {
         <EncounterDetailModal
           encounter={selectedEncounter}
           onClose={() => setSelectedEncounter(null)}
+          onUpdate={async (id, updates) => {
+            const updated = await updateEncounter(id, updates);
+            setSelectedEncounter(updated);
+            return updated;
+          }}
+          onDelete={async (id) => {
+            await deleteEncounter(id);
+            setSelectedEncounter(null);
+          }}
         />
       )}
     </div>
