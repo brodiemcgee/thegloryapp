@@ -184,8 +184,21 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     }
   };
 
+  // Helper to validate UUID format
+  const isValidUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
   const handleAlbumShare = async (album: Album) => {
     setShowAlbumPicker(false);
+
+    // Validate UUIDs before attempting to share
+    // Mock data uses simple IDs like "1", "2" which aren't valid UUIDs
+    if (!isValidUUID(conversation.user.id) || !isValidUUID(conversation.id)) {
+      alert('Album sharing requires a real conversation. This appears to be demo data.');
+      return;
+    }
 
     // Grant access to the recipient
     const grantId = await grantAccess(album.id, conversation.user.id, conversation.id);
