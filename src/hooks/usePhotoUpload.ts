@@ -50,7 +50,7 @@ export function usePhotoUpload(): UsePhotoUploadResult {
         if (type === 'profile') {
           result = await uploadProfilePhoto(file, userId);
         } else if (type === 'chat' && conversationId) {
-          result = await uploadChatImage(file, conversationId);
+          result = await uploadChatImage(file, userId, conversationId);
         } else {
           throw new Error('Invalid upload type or missing conversationId');
         }

@@ -91,11 +91,13 @@ export async function uploadProfilePhoto(
 /**
  * Uploads chat image to 'chat-images' bucket
  * @param file - Image file to upload
+ * @param userId - User ID (required for RLS policy - must be first folder)
  * @param conversationId - Conversation ID for namespacing
  * @returns Upload result with path and public URL
  */
 export async function uploadChatImage(
   file: File,
+  userId: string,
   conversationId: string
 ): Promise<UploadResult> {
   // Validate file
@@ -104,11 +106,11 @@ export async function uploadChatImage(
     throw new Error(validationError);
   }
 
-  // Generate unique filename
+  // Generate unique filename - userId must be first folder for RLS policy
   const timestamp = Date.now();
   const randomString = Math.random().toString(36).substring(2, 8);
   const extension = file.name.split('.').pop();
-  const filename = `${conversationId}/${timestamp}-${randomString}.${extension}`;
+  const filename = `${userId}/${conversationId}/${timestamp}-${randomString}.${extension}`;
 
   // Upload to Supabase Storage
   const { data, error } = await supabase.storage
