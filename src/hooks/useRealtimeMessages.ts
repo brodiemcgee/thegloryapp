@@ -20,24 +20,37 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
   const [loading, setLoading] = useState(true);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
-  // Load initial messages
+  // Load initial messages from database
   useEffect(() => {
-    if (!user) return;
+    if (!user || conversationId === 'skip') return;
 
-    // In production, this would query the messages table
-    // For now, stub with empty array
-    setLoading(true);
+    const loadMessages = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
 
-    // Simulate API call
-    setTimeout(() => {
-      setMessages([]);
-      setLoading(false);
-    }, 300);
+        if (error) {
+          console.error('Error loading messages:', error);
+        } else {
+          setMessages(data || []);
+        }
+      } catch (err) {
+        console.error('Error loading messages:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMessages();
   }, [conversationId, user]);
 
   // Subscribe to new messages
   useEffect(() => {
-    if (!user) return;
+    if (!user || conversationId === 'skip') return;
 
     const messagesChannel = supabase
       .channel(`messages:${conversationId}`)
@@ -96,8 +109,9 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
   const sendMessage = useCallback(async (content: string, imageUrl?: string, albumShare?: AlbumShareMessage) => {
     if (!user || !content.trim()) return;
 
+    const tempId = `temp-${Date.now()}`;
     const newMessage: Message = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       sender_id: user.id,
       receiver_id: otherUserId,
       content: content.trim(),
@@ -109,36 +123,31 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
     // Optimistically add to UI
     setMessages((prev) => [...prev, newMessage]);
 
-    // In production, this would insert into Supabase
-    // The realtime subscription would then update with the real ID
     try {
-      // const { data, error } = await supabase
-      //   .from('messages')
-      //   .insert({
-      //     conversation_id: conversationId,
-      //     sender_id: user.id,
-      //     receiver_id: otherUserId,
-      //     content: content.trim(),
-      //     image_url: imageUrl,
-      //     album_share: albumShare,
-      //   })
-      //   .select()
-      //   .single();
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: content.trim(),
+          image_url: imageUrl || null,
+          album_share: albumShare || null,
+        })
+        .select()
+        .single();
 
-      // if (error) throw error;
+      if (error) throw error;
 
       // Replace temp message with real one from database
-      // setMessages((prev) =>
-      //   prev.map((msg) =>
-      //     msg.id === newMessage.id ? data : msg
-      //   )
-      // );
-
-      console.log('Message sent (stubbed):', newMessage);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId ? { ...data, receiver_id: otherUserId } : msg
+        )
+      );
     } catch (error) {
       console.error('Error sending message:', error);
       // Remove optimistic message on error
-      setMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
     }
   }, [user, conversationId, otherUserId]);
 
@@ -146,17 +155,27 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
   const markAsRead = useCallback(async (messageIds: string[]) => {
     if (!user || messageIds.length === 0) return;
 
+    // Filter out temp message IDs
+    const realMessageIds = messageIds.filter(id => !id.startsWith('temp-'));
+    if (realMessageIds.length === 0) return;
+
     try {
-      // In production, this would update the messages table
-      // const { error } = await supabase
-      //   .from('messages')
-      //   .update({ read_at: new Date().toISOString() })
-      //   .in('id', messageIds)
-      //   .is('read_at', null);
+      const { error } = await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', realMessageIds)
+        .is('read_at', null);
 
-      // if (error) throw error;
+      if (error) throw error;
 
-      console.log('Messages marked as read (stubbed):', messageIds);
+      // Update local state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          realMessageIds.includes(msg.id)
+            ? { ...msg, read_at: new Date().toISOString() }
+            : msg
+        )
+      );
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
