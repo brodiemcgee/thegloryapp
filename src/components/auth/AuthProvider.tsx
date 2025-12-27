@@ -1,4 +1,4 @@
-// Auth provider that wraps the app with consent, login, and onboarding checks
+// Auth provider that wraps the app with consent, login, onboarding, and age verification checks
 
 'use client';
 
@@ -9,6 +9,7 @@ import ConsentModal from '@/components/ConsentModal';
 import LoginScreen from './LoginScreen';
 import VerifyScreen from './VerifyScreen';
 import OnboardingScreen from './OnboardingScreen';
+import AgeVerificationGate from '@/components/AgeVerificationGate';
 
 type AuthMethod = 'phone' | 'email';
 
@@ -16,6 +17,7 @@ interface Profile {
   id: string;
   username?: string;
   onboarded?: boolean;
+  is_verified?: boolean;
 }
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -31,7 +33,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // Check consent on mount
   useEffect(() => {
-    const consent = localStorage.getItem('thehole_consent_accepted');
+    const consent = localStorage.getItem('glory_consent_accepted');
     setHasConsent(!!consent);
     setCheckingConsent(false);
   }, []);
@@ -69,7 +71,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setLoadingProfile(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, onboarded')
+        .select('id, username, onboarded, is_verified')
         .eq('id', user.id)
         .single();
 
@@ -160,6 +162,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     );
   }
 
-  // User is authenticated and onboarded - show app
-  return <>{children}</>;
+  // User is authenticated and onboarded - require age verification before showing app
+  return (
+    <AgeVerificationGate requireVerification={true}>
+      {children}
+    </AgeVerificationGate>
+  );
 }

@@ -2,7 +2,7 @@
 
 'use client';
 
-const CONSENT_KEY = 'thehole_consent_accepted';
+const CONSENT_KEY = 'glory_consent_accepted';
 
 interface ConsentModalProps {
   onAccept: () => void;

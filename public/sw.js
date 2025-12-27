@@ -23,13 +23,13 @@ self.addEventListener('push', function(event) {
   // Post message to all clients so in-app notification can show
   event.waitUntil(
     Promise.all([
-      self.registration.showNotification(data.title || 'thehole.app', options),
+      self.registration.showNotification(data.title || 'GLORY', options),
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
         clientList.forEach(function(client) {
           client.postMessage({
             type: 'PUSH_RECEIVED',
             payload: {
-              title: data.title || 'thehole.app',
+              title: data.title || 'GLORY',
               body: data.body || 'You have a new notification',
               url: data.url || '/',
             },

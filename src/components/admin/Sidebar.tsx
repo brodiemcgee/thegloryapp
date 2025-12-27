@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/admin/useAdminAuth';
+import { GloryIcon } from '@/components/icons';
 
 interface NavItem {
   label: string;
@@ -71,9 +72,7 @@ export function AdminSidebar({ collapsed, onToggle, role }: AdminSidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
         {!collapsed && (
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TH</span>
-            </div>
+            <GloryIcon className="w-8 h-8 text-purple-500" />
             <span className="font-semibold text-lg">Admin</span>
           </Link>
         )}

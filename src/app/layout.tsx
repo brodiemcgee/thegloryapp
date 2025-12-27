@@ -7,13 +7,13 @@ import AuthProvider from '@/components/auth/AuthProvider';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 
 export const metadata: Metadata = {
-  title: 'thehole.app',
+  title: 'GLORY',
   description: 'Real-time cruising app',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'thehole',
+    title: 'GLORY',
   },
 };
 

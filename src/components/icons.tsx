@@ -4,6 +4,46 @@ interface IconProps {
   className?: string;
 }
 
+// GLORY Logo - Full wordmark
+export function GloryLogo({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 500 100" fill="currentColor">
+      {/* G - Bold geometric style */}
+      <path d="M50 0C77.6 0 100 22.4 100 50C100 77.6 77.6 100 50 100C22.4 100 0 77.6 0 50C0 22.4 22.4 0 50 0ZM50 18C32.3 18 18 32.3 18 50C18 67.7 32.3 82 50 82C67.7 82 82 67.7 82 50H50V60H66C61.5 70.5 51.5 78 40 78C25.1 78 13 65.9 13 50C13 34.1 25.1 22 40 22C49.2 22 57.3 26.8 62 34L76 24C68.3 12.7 55 5 40 5C18.5 5 1 22.5 1 44C1 65.5 18.5 83 40 83C61.5 83 79 65.5 79 44V40H50V18Z" />
+
+      {/* L */}
+      <path d="M115 5H133V82H185V100H115V5Z" />
+
+      {/* O with figure inside */}
+      <path d="M250 0C277.6 0 300 22.4 300 50C300 77.6 277.6 100 250 100C222.4 100 200 77.6 200 50C200 22.4 222.4 0 250 0ZM250 18C232.3 18 218 32.3 218 50C218 67.7 232.3 82 250 82C267.7 82 282 67.7 282 50C282 32.3 267.7 18 250 18Z" />
+      {/* Figure inside O - stylized spread figure */}
+      <circle cx="250" cy="38" r="5" />
+      <path d="M238 55L244 48L250 56L256 48L262 55" strokeWidth="3" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M241 68L247 58M259 68L253 58" strokeWidth="3" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* R */}
+      <path d="M315 5H365C385.4 5 402 21.6 402 42C402 55.5 394.5 67.2 383.5 73L408 100H385L362 75H333V100H315V5ZM333 23V57H362C374.7 57 385 46.7 385 34C385 21.3 374.7 23 362 23H333Z" />
+
+      {/* Y */}
+      <path d="M415 5L450 55L485 5H505L458 72V100H442V72L395 5H415Z" />
+    </svg>
+  );
+}
+
+// GLORY Icon - Just the O with figure (for app icon/favicon)
+export function GloryIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" fill="currentColor">
+      {/* O circle */}
+      <path d="M50 0C77.6 0 100 22.4 100 50C100 77.6 77.6 100 50 100C22.4 100 0 77.6 0 50C0 22.4 22.4 0 50 0ZM50 18C32.3 18 18 32.3 18 50C18 67.7 32.3 82 50 82C67.7 82 82 67.7 82 50C82 32.3 67.7 18 50 18Z" />
+      {/* Figure inside - stylized spread figure */}
+      <circle cx="50" cy="38" r="5" />
+      <path d="M38 55L44 48L50 56L56 48L62 55" strokeWidth="3" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M41 68L47 58M59 68L53 58" strokeWidth="3" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function MapIcon({ className }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

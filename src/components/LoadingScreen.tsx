@@ -1,6 +1,7 @@
 // Full screen loading component for initial app load
 
 import LoadingSpinner from './LoadingSpinner';
+import { GloryLogo } from './icons';
 
 interface LoadingScreenProps {
   text?: string;
@@ -12,9 +13,7 @@ export default function LoadingScreen({ text = 'Loading...' }: LoadingScreenProp
       <div className="flex flex-col items-center gap-6">
         {/* App Logo/Name */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            thehole.app
-          </h1>
+          <GloryLogo className="h-12 w-auto text-white" />
           <p className="text-hole-muted text-sm mt-2">
             Real-time cruising
           </p>
