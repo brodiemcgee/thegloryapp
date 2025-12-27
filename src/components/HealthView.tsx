@@ -4,13 +4,14 @@
 
 import { useState } from 'react';
 import { useHealthScreens, StiResults } from '@/hooks/useHealthScreens';
-import { useEncounters } from '@/hooks/useEncounters';
+import { useEncounters, Encounter } from '@/hooks/useEncounters';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { useContactTracingContext } from '@/contexts/ContactTracingContext';
 import { PlusIcon, SettingsIcon } from './icons';
 import HealthScreenModal from './HealthScreenModal';
 import ManualEncounterModal from './ManualEncounterModal';
 import EncounterCard from './EncounterCard';
+import EncounterDetailModal from './EncounterDetailModal';
 import MedicationTracker from './MedicationTracker';
 import HealthSettingsModal from './HealthSettingsModal';
 import { ContactTraceAlerts } from './ContactTraceAlert';
@@ -23,6 +24,7 @@ export default function HealthView() {
   const [showHealthModal, setShowHealthModal] = useState(false);
   const [showEncounterModal, setShowEncounterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [selectedEncounter, setSelectedEncounter] = useState<Encounter | null>(null);
 
   // Calculate partners since last screen
   const partnersSinceLastScreen = latestScreen
@@ -288,7 +290,11 @@ export default function HealthView() {
           ) : (
             <div className="space-y-2">
               {encounters.map((encounter) => (
-                <EncounterCard key={encounter.id} encounter={encounter} />
+                <EncounterCard
+                  key={encounter.id}
+                  encounter={encounter}
+                  onClick={() => setSelectedEncounter(encounter)}
+                />
               ))}
             </div>
           )}
@@ -310,6 +316,12 @@ export default function HealthView() {
       )}
       {showSettingsModal && (
         <HealthSettingsModal onClose={() => setShowSettingsModal(false)} />
+      )}
+      {selectedEncounter && (
+        <EncounterDetailModal
+          encounter={selectedEncounter}
+          onClose={() => setSelectedEncounter(null)}
+        />
       )}
     </div>
   );
