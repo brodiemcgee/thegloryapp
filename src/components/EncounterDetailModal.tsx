@@ -507,8 +507,8 @@ export default function EncounterDetailModal({
             </div>
           )}
 
-          {/* Delete button (only in edit mode) */}
-          {isEditing && onDelete && (
+          {/* Delete button */}
+          {onDelete && (
             <div className="pt-4 border-t border-hole-border">
               {showDeleteConfirm ? (
                 <div className="space-y-3">
