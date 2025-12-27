@@ -418,6 +418,13 @@ export default function MapView() {
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    // In heatmap mode, remove all location markers (same as user markers)
+    if (viewMode === 'heatmap') {
+      locationMarkersMapRef.current.forEach((marker) => marker.remove());
+      locationMarkersMapRef.current.clear();
+      return;
+    }
+
     const currentLocationIds = new Set(mockLocations.map(l => l.id));
 
     // Remove markers for locations no longer present
@@ -514,7 +521,7 @@ export default function MapView() {
 
       locationMarkersMapRef.current.set(location.id, marker);
     });
-  }, [mapLoaded]);
+  }, [mapLoaded, viewMode, usersAtLocations]);
 
   // Add/update user location marker (current user's profile photo at display position)
   useEffect(() => {
@@ -665,16 +672,33 @@ export default function MapView() {
     // For now, just log it
   };
 
-  // Prepare heatmap points from users (memoized)
+  // Prepare heatmap points from users AND cruising spots (memoized)
   const heatmapPoints = useMemo(() => {
-    return usersForMarkers
+    // User points
+    const userPoints = usersForMarkers
       .filter((user) => user.location)
       .map((user) => ({
         lat: user.location!.lat,
         lng: user.location!.lng,
         weight: user.is_online ? 2 : 1,
       }));
-  }, [usersForMarkers]);
+
+    // Cruising spot points (weighted by user count at each location)
+    const locationPoints = mockLocations.map((location) => {
+      const usersData = usersAtLocations[location.id];
+      const totalCount = (usersData?.nearbyUsers.length || 0) + (usersData?.presenceUsers.length || 0);
+      // Base weight of 1 + bonus for each user at the location
+      // Verified locations with more users show as hotter spots
+      const weight = Math.max(1, totalCount * 1.5);
+      return {
+        lat: location.lat,
+        lng: location.lng,
+        weight: weight,
+      };
+    });
+
+    return [...userPoints, ...locationPoints];
+  }, [usersForMarkers, usersAtLocations]);
 
   return (
     <div className="relative h-full w-full flex flex-col">
