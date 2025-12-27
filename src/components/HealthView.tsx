@@ -1,47 +1,213 @@
-// Health view - sexual health resources and testing info
+// Health & Encounters tracking page
 
 'use client';
 
+import { useState } from 'react';
+import { useHealthScreens } from '@/hooks/useHealthScreens';
+import { useEncounters } from '@/hooks/useEncounters';
+import { PlusIcon } from './icons';
+import HealthScreenModal from './HealthScreenModal';
+import ManualEncounterModal from './ManualEncounterModal';
+import EncounterCard from './EncounterCard';
+
 export default function HealthView() {
+  const { latestScreen, daysSinceLastTest, addScreen, loading: healthLoading } = useHealthScreens();
+  const { encounters, stats, addManualEncounter, loading: encountersLoading } = useEncounters();
+  const [showHealthModal, setShowHealthModal] = useState(false);
+  const [showEncounterModal, setShowEncounterModal] = useState(false);
+
+  // Get color class based on days since last test
+  const getHealthStatusColor = () => {
+    if (daysSinceLastTest === null) return 'text-hole-muted';
+    if (daysSinceLastTest < 90) return 'text-green-500';
+    if (daysSinceLastTest < 180) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getHealthStatusBg = () => {
+    if (daysSinceLastTest === null) return 'bg-hole-surface';
+    if (daysSinceLastTest < 90) return 'bg-green-500/10 border-green-500/20';
+    if (daysSinceLastTest < 180) return 'bg-yellow-500/10 border-yellow-500/20';
+    return 'bg-red-500/10 border-red-500/20';
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const handleAddHealthScreen = async (
+    testDate: string,
+    result?: 'all_clear' | 'needs_followup' | 'pending',
+    notes?: string
+  ) => {
+    await addScreen(testDate, result, notes);
+  };
+
+  const handleAddManualEncounter = async (
+    metAt: string,
+    name?: string,
+    rating?: number,
+    notes?: string
+  ) => {
+    await addManualEncounter(metAt, name, rating, notes);
+  };
+
   return (
-    <div className="h-full w-full flex flex-col bg-hole-bg">
+    <div className="h-full flex flex-col bg-hole-bg">
       {/* Header */}
-      <div className="p-4 border-b border-hole-border">
-        <h1 className="text-xl font-bold">Health</h1>
-        <p className="text-sm text-hole-muted">Sexual health resources</p>
+      <div className="flex items-center justify-between p-4 border-b border-hole-border">
+        <h1 className="text-lg font-semibold">Health & Encounters</h1>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {/* PrEP Section */}
-        <div className="bg-hole-surface rounded-lg p-4 border border-hole-border">
-          <h2 className="font-semibold mb-2">PrEP Information</h2>
-          <p className="text-sm text-hole-muted">
-            Pre-exposure prophylaxis (PrEP) is a medication that can reduce your risk of getting HIV.
-          </p>
-        </div>
+      <div className="flex-1 overflow-auto p-4 space-y-6">
+        {/* Health Screen Section */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm text-hole-muted font-medium">Last Health Screen</h2>
+            <button
+              onClick={() => setShowHealthModal(true)}
+              className="text-xs text-hole-accent hover:underline"
+            >
+              {latestScreen ? 'Update' : 'Add'}
+            </button>
+          </div>
 
-        {/* Testing Section */}
-        <div className="bg-hole-surface rounded-lg p-4 border border-hole-border">
-          <h2 className="font-semibold mb-2">Get Tested</h2>
-          <p className="text-sm text-hole-muted">
-            Regular STI testing is important for your health and the health of your partners.
-          </p>
-          <button className="mt-3 w-full py-2 bg-hole-accent text-white rounded-lg font-medium">
-            Find Testing Near You
-          </button>
-        </div>
+          <div className={`rounded-lg p-4 border ${getHealthStatusBg()}`}>
+            {healthLoading ? (
+              <p className="text-hole-muted">Loading...</p>
+            ) : latestScreen ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className={`text-lg font-semibold ${getHealthStatusColor()}`}>
+                    {formatDate(latestScreen.test_date)}
+                  </span>
+                  {latestScreen.result && (
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        latestScreen.result === 'all_clear'
+                          ? 'bg-green-500/20 text-green-400'
+                          : latestScreen.result === 'needs_followup'
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}
+                    >
+                      {latestScreen.result === 'all_clear'
+                        ? 'All Clear'
+                        : latestScreen.result === 'needs_followup'
+                        ? 'Needs Follow-up'
+                        : 'Pending'}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-sm ${getHealthStatusColor()}`}>
+                  {daysSinceLastTest === 0
+                    ? 'Today'
+                    : daysSinceLastTest === 1
+                    ? '1 day ago'
+                    : `${daysSinceLastTest} days ago`}
+                </p>
+                {daysSinceLastTest !== null && daysSinceLastTest >= 90 && (
+                  <p className="text-xs text-hole-muted mt-2">
+                    {daysSinceLastTest >= 180
+                      ? 'Consider scheduling a test soon'
+                      : 'A regular checkup is recommended every 3 months'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-hole-muted mb-3">No health screen logged yet</p>
+                <button
+                  onClick={() => setShowHealthModal(true)}
+                  className="px-4 py-2 bg-hole-accent text-white rounded-lg text-sm font-medium hover:bg-hole-accent-hover transition-colors"
+                >
+                  Log Your First Test
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
-        {/* Resources Section */}
-        <div className="bg-hole-surface rounded-lg p-4 border border-hole-border">
-          <h2 className="font-semibold mb-2">Resources</h2>
-          <ul className="text-sm text-hole-muted space-y-2">
-            <li>• CDC Sexual Health Guidelines</li>
-            <li>• Local LGBTQ+ Health Centers</li>
-            <li>• Mental Health Support</li>
-          </ul>
-        </div>
+        {/* Quick Stats Section */}
+        <section>
+          <h2 className="text-sm text-hole-muted font-medium mb-3">Quick Stats</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-hole-surface rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-hole-accent">{stats.thisMonth}</p>
+              <p className="text-xs text-hole-muted">This month</p>
+            </div>
+            <div className="bg-hole-surface rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-xs text-hole-muted">Total</p>
+            </div>
+            <div className="bg-hole-surface rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">
+                {stats.avgRating ? stats.avgRating.toFixed(1) : '-'}
+              </p>
+              <p className="text-xs text-hole-muted">Avg rating</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Encounters Section */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm text-hole-muted font-medium">Encounters</h2>
+            <button
+              onClick={() => setShowEncounterModal(true)}
+              className="flex items-center gap-1 text-xs text-hole-accent hover:underline"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Add Manual
+            </button>
+          </div>
+
+          {encountersLoading ? (
+            <div className="bg-hole-surface rounded-lg p-4">
+              <p className="text-hole-muted text-center">Loading encounters...</p>
+            </div>
+          ) : encounters.length === 0 ? (
+            <div className="bg-hole-surface rounded-lg p-6 text-center">
+              <p className="text-hole-muted mb-3">No encounters logged yet</p>
+              <p className="text-xs text-hole-muted mb-4">
+                Encounters are logged when you use the "Met" button on user profiles or chats,
+                or you can add manual entries for people you meet outside the app.
+              </p>
+              <button
+                onClick={() => setShowEncounterModal(true)}
+                className="px-4 py-2 bg-hole-surface border border-hole-border text-white rounded-lg text-sm font-medium hover:bg-hole-border transition-colors"
+              >
+                Add Manual Entry
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {encounters.map((encounter) => (
+                <EncounterCard key={encounter.id} encounter={encounter} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
+
+      {/* Modals */}
+      {showHealthModal && (
+        <HealthScreenModal
+          onClose={() => setShowHealthModal(false)}
+          onSave={handleAddHealthScreen}
+        />
+      )}
+      {showEncounterModal && (
+        <ManualEncounterModal
+          onClose={() => setShowEncounterModal(false)}
+          onSave={handleAddManualEncounter}
+        />
+      )}
     </div>
   );
 }
