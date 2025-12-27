@@ -37,7 +37,7 @@ export default function MapView() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
-  const userMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const userMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const locationMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<'users' | 'heatmap'>('users');
@@ -122,6 +122,7 @@ export default function MapView() {
     return () => {
       // Clean up markers
       userMarkersRef.current.forEach((marker) => marker.remove());
+      userMarkersRef.current.clear();
       locationMarkersRef.current.forEach((marker) => marker.remove());
       map.current?.remove();
       map.current = null;
@@ -156,119 +157,160 @@ export default function MapView() {
     return [...filteredDbUsers, ...filteredMockUsers];
   }, [intentFilter, dbUsers]); // Note: position is NOT a dependency - markers don't move with GPS
 
+  // Create a marker element for a user (extracted function for reuse)
+  const createUserMarkerElement = (user: User, onClick: () => void) => {
+    const ringColor = getIntentColor(user.intent);
+    const initial = user.username.charAt(0).toUpperCase();
+    const hasAvatar = user.avatar_url && user.avatar_url.length > 0;
+
+    const el = document.createElement('div');
+    el.className = 'user-marker';
+    el.style.cssText = `
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
+      max-width: 48px;
+      max-height: 48px;
+      position: relative;
+      display: block;
+      box-sizing: border-box;
+      cursor: pointer;
+    `;
+
+    // Create the ring/border element
+    const ring = document.createElement('div');
+    ring.style.cssText = `
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid ${ringColor};
+      box-shadow: ${user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none'};
+      transition: box-shadow 0.15s ease-out;
+      pointer-events: none;
+    `;
+
+    // Create the inner circle with photo or initial
+    const inner = document.createElement('div');
+    inner.style.cssText = `
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: ${hasAvatar ? `url(${user.avatar_url}) center/cover` : '#1f2937'};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 16px;
+      color: white;
+      overflow: hidden;
+      pointer-events: none;
+    `;
+
+    if (!hasAvatar) {
+      inner.textContent = initial;
+    }
+
+    el.appendChild(ring);
+    el.appendChild(inner);
+
+    // Add verified badge if verified
+    if (user.is_verified) {
+      const badge = document.createElement('div');
+      badge.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 14px;
+        height: 14px;
+        background: #22c55e;
+        border: 2px solid #0a0a0a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      `;
+      badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" fill="none"/></svg>`;
+      el.appendChild(badge);
+    }
+
+    // Add online indicator dot
+    if (user.is_online) {
+      const onlineDot = document.createElement('div');
+      onlineDot.style.cssText = `
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 10px;
+        height: 10px;
+        background: #22c55e;
+        border: 2px solid #0a0a0a;
+        border-radius: 50%;
+        pointer-events: none;
+      `;
+      el.appendChild(onlineDot);
+    }
+
+    el.addEventListener('mouseenter', () => {
+      ring.style.boxShadow = `0 0 0 4px ${ringColor}50, 0 0 16px ${ringColor}70`;
+    });
+
+    el.addEventListener('mouseleave', () => {
+      ring.style.boxShadow = user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none';
+    });
+
+    el.addEventListener('click', onClick);
+
+    return el;
+  };
+
   // Update user markers based on view mode and users
+  // Uses Map to track markers by user ID for stable updates
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Remove existing user markers
-    userMarkersRef.current.forEach((marker) => marker.remove());
-    userMarkersRef.current = [];
-
     if (viewMode === 'users') {
+      const currentUserIds = new Set(usersForMarkers.map(u => u.id));
+      const existingUserIds = new Set(userMarkersRef.current.keys());
+
+      // Remove markers for users no longer in the list
+      existingUserIds.forEach(userId => {
+        if (!currentUserIds.has(userId)) {
+          const marker = userMarkersRef.current.get(userId);
+          if (marker) {
+            marker.remove();
+            userMarkersRef.current.delete(userId);
+          }
+        }
+      });
+
+      // Add or update markers for current users
       usersForMarkers.forEach((user) => {
         if (!user.location || !map.current) return;
 
-        const ringColor = getIntentColor(user.intent);
-        const initial = user.username.charAt(0).toUpperCase();
-        const hasAvatar = user.avatar_url && user.avatar_url.length > 0;
+        const existingMarker = userMarkersRef.current.get(user.id);
 
-        const el = document.createElement('div');
-        el.className = 'user-marker';
-        el.style.cssText = `
-          width: 48px;
-          height: 48px;
-          position: relative;
-          cursor: pointer;
-        `;
+        if (existingMarker) {
+          // Marker exists - only update position if needed (coordinates are stable for mock data)
+          // Don't recreate the marker element
+        } else {
+          // Create new marker for new user
+          const el = createUserMarkerElement(user, () => {
+            setSelectedUser(user);
+          });
 
-        // Create the ring/border element
-        const ring = document.createElement('div');
-        ring.style.cssText = `
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
-          border: 3px solid ${ringColor};
-          box-shadow: ${user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none'};
-          transition: box-shadow 0.15s ease-out;
-          pointer-events: none;
-        `;
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([user.location.lng, user.location.lat])
+            .addTo(map.current!);
 
-        // Create the inner circle with photo or initial
-        const inner = document.createElement('div');
-        inner.style.cssText = `
-          position: absolute;
-          inset: 4px;
-          border-radius: 50%;
-          background: ${hasAvatar ? `url(${user.avatar_url}) center/cover` : '#1f2937'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600;
-          font-size: 16px;
-          color: white;
-          overflow: hidden;
-          pointer-events: none;
-        `;
-
-        if (!hasAvatar) {
-          inner.textContent = initial;
+          userMarkersRef.current.set(user.id, marker);
         }
-
-        el.appendChild(ring);
-        el.appendChild(inner);
-
-        // Add verified badge if verified
-        if (user.is_verified) {
-          const badge = document.createElement('div');
-          badge.style.cssText = `
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 14px;
-            height: 14px;
-            background: #22c55e;
-            border: 2px solid #0a0a0a;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-          `;
-          badge.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3" fill="none"/></svg>`;
-          el.appendChild(badge);
-        }
-
-        // Add online indicator dot
-        if (user.is_online) {
-          const onlineDot = document.createElement('div');
-          onlineDot.style.cssText = `
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 10px;
-            height: 10px;
-            background: #22c55e;
-            border: 2px solid #0a0a0a;
-            border-radius: 50%;
-            pointer-events: none;
-          `;
-          el.appendChild(onlineDot);
-        }
-
-        el.addEventListener('mouseenter', () => {
-          ring.style.boxShadow = `0 0 0 4px ${ringColor}50, 0 0 16px ${ringColor}70`;
-        });
-
-        el.addEventListener('mouseleave', () => {
-          ring.style.boxShadow = user.is_online ? `0 0 0 2px ${ringColor}40, 0 0 12px ${ringColor}60` : 'none';
-        });
-
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([user.location.lng, user.location.lat])
-          .addTo(map.current!);
-
-        userMarkersRef.current.push(marker);
       });
+    } else {
+      // Heatmap mode - remove all user markers
+      userMarkersRef.current.forEach((marker) => marker.remove());
+      userMarkersRef.current.clear();
     }
   }, [viewMode, usersForMarkers, mapLoaded]);
 
@@ -359,7 +401,13 @@ export default function MapView() {
       el.style.cssText = `
         width: 48px;
         height: 48px;
+        min-width: 48px;
+        min-height: 48px;
+        max-width: 48px;
+        max-height: 48px;
         position: relative;
+        display: block;
+        box-sizing: border-box;
         cursor: pointer;
         z-index: 100;
       `;
@@ -457,7 +505,13 @@ export default function MapView() {
     el.style.cssText = `
       width: 52px;
       height: 52px;
+      min-width: 52px;
+      min-height: 52px;
+      max-width: 52px;
+      max-height: 52px;
       position: relative;
+      display: block;
+      box-sizing: border-box;
       cursor: pointer;
     `;
 
@@ -502,8 +556,14 @@ export default function MapView() {
     label.style.cssText = `
       position: absolute;
       bottom: -16px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    `;
+    const labelInner = document.createElement('span');
+    labelInner.style.cssText = `
       background: ${ringColor};
       color: white;
       font-size: 10px;
@@ -511,18 +571,18 @@ export default function MapView() {
       padding: 1px 6px;
       border-radius: 4px;
       white-space: nowrap;
-      pointer-events: none;
       max-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
     `;
     if (snappedLocation) {
-      label.textContent = `@ ${snappedLocation.name}`;
+      labelInner.textContent = `@ ${snappedLocation.name}`;
     } else if (locationAccuracy > 0) {
-      label.textContent = `You (~${locationAccuracy}m)`;
+      labelInner.textContent = `You (~${locationAccuracy}m)`;
     } else {
-      label.textContent = 'You';
+      labelInner.textContent = 'You';
     }
+    label.appendChild(labelInner);
     el.appendChild(label);
 
     userLocationMarker.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
