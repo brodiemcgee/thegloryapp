@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useHealthScreens, StiResults } from '@/hooks/useHealthScreens';
 import { useEncounters } from '@/hooks/useEncounters';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
-import { useContactTracing } from '@/hooks/useContactTracing';
+import { useContactTracingContext } from '@/contexts/ContactTracingContext';
 import { PlusIcon, SettingsIcon } from './icons';
 import HealthScreenModal from './HealthScreenModal';
 import ManualEncounterModal from './ManualEncounterModal';
@@ -19,7 +19,7 @@ export default function HealthView() {
   const { latestScreen, daysSinceLastTest, addScreen, loading: healthLoading } = useHealthScreens();
   const { encounters, stats, addManualEncounter, loading: encountersLoading } = useEncounters();
   const { settings } = useHealthSettings();
-  const { notifications, markAsRead } = useContactTracing();
+  const { notifications, markAsRead } = useContactTracingContext();
   const [showHealthModal, setShowHealthModal] = useState(false);
   const [showEncounterModal, setShowEncounterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);

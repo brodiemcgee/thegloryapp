@@ -2,7 +2,7 @@
 
 'use client';
 
-import { ContactTraceNotification, STI_TYPES } from '@/hooks/useContactTracing';
+import { ContactTraceNotification, STI_TYPES } from '@/contexts/ContactTracingContext';
 import { XIcon } from './icons';
 
 interface ContactTraceAlertProps {

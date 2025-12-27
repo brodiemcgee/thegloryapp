@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { XIcon } from './icons';
-import { useContactTracing, STI_TYPES } from '@/hooks/useContactTracing';
+import { useContactTracingContext, STI_TYPES } from '@/contexts/ContactTracingContext';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { StiResult, StiResults, deriveStatusFromResults } from '@/hooks/useHealthScreens';
 
@@ -30,7 +30,7 @@ export default function HealthScreenModal({
   onSave,
   initialData,
 }: HealthScreenModalProps) {
-  const { sendNotifications } = useContactTracing();
+  const { sendNotifications } = useContactTracingContext();
   const { settings } = useHealthSettings();
 
   const [testDate, setTestDate] = useState(

@@ -9,6 +9,7 @@ import GridView from '@/components/GridView';
 import MessagesView from '@/components/MessagesView';
 import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
+import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 
 type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
@@ -33,14 +34,16 @@ export default function Home() {
   };
 
   return (
-    <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
-      {/* Main content area */}
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
+    <ContactTracingProvider>
+      <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
+        {/* Main content area */}
+        <div className="flex-1 overflow-hidden">
+          {renderContent()}
+        </div>
 
-      {/* Bottom navigation */}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-    </main>
+        {/* Bottom navigation */}
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </main>
+    </ContactTracingProvider>
   );
 }

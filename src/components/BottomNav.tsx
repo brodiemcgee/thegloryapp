@@ -3,7 +3,7 @@
 'use client';
 
 import { MapIcon, GridIcon, MessageIcon, HealthIcon, UserIcon } from './icons';
-import { useContactTracing } from '@/hooks/useContactTracing';
+import { useContactTracingContext } from '@/contexts/ContactTracingContext';
 
 type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
@@ -21,7 +21,7 @@ const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ className?: st
 ];
 
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  const { unreadCount } = useContactTracing();
+  const { unreadCount } = useContactTracingContext();
 
   return (
     <nav className="bg-hole-surface border-t border-hole-border safe-bottom">
