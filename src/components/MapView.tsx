@@ -51,8 +51,8 @@ export default function MapView() {
     radiusKm: DEFAULT_RADIUS_KM,
   });
 
-  // Default center (Sydney) - will use user position when available
-  const defaultCenter: [number, number] = [151.2093, -33.8688];
+  // Default center (Melbourne) - will use user position when available
+  const defaultCenter: [number, number] = [144.9631, -37.8136];
 
   // Calculate the fuzzed position for privacy (consistent during session)
   const fuzzedPosition = useMemo(() => {
