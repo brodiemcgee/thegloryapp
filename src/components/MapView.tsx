@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { mockUsers, mockLocations } from '@/data/mockData';
+import { mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
@@ -142,14 +142,8 @@ export default function MapView() {
   // Get users to display on map (stable reference for markers)
   // Filtered by all filter criteria
   const usersForMarkers = useMemo(() => {
-    const dbUserIds = new Set(dbUsers.map(u => u.id));
-    const allUsers = [
-      ...dbUsers,
-      ...mockUsers.filter(u => !dbUserIds.has(u.id))
-    ].filter(u => u.location);
-
-    // Apply all filters
-    let result = allUsers;
+    // Use only real database users with locations
+    let result = dbUsers.filter(u => u.location);
 
     // Filter by online status
     if (filters.online === 'online') {
