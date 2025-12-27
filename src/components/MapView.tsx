@@ -67,10 +67,13 @@ export default function MapView() {
     }
   }, [position, updatePresence]);
 
-  // Use database users if available, otherwise fall back to mock users
+  // Combine real DB users with mock users for demo
   // Memoized to prevent marker flickering from unnecessary re-renders
   const filteredUsers = useMemo(() => {
-    const sourceUsers = dbUsers.length > 0 ? dbUsers : mockUsers;
+    const dbUserIds = new Set(dbUsers.map(u => u.id));
+    const filteredMockUsers = mockUsers.filter(u => !dbUserIds.has(u.id));
+    const sourceUsers = [...dbUsers, ...filteredMockUsers];
+
     return sourceUsers.filter((user) => {
       // Filter by location if position available
       if (position && user.location) {
@@ -78,8 +81,8 @@ export default function MapView() {
           return false;
         }
       }
-      // Filter by intent (already filtered in hook for db users)
-      if (intentFilter !== 'all' && dbUsers.length === 0 && user.intent !== intentFilter) {
+      // Filter by intent
+      if (intentFilter !== 'all' && user.intent !== intentFilter) {
         return false;
       }
       return true;

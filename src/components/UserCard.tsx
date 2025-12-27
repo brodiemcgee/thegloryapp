@@ -78,15 +78,15 @@ export default function UserCard({ user, variant, onClick }: UserCardProps) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col bg-hole-surface rounded-md overflow-hidden transition-transform active:scale-95"
+      className="flex flex-col w-full bg-hole-surface rounded-md overflow-hidden transition-transform active:scale-95"
     >
       {/* Image */}
-      <div className="relative aspect-square bg-hole-border">
+      <div className="relative aspect-square bg-hole-border overflow-hidden">
         {user.avatar_url ? (
           <img
             src={user.avatar_url}
             alt=""
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

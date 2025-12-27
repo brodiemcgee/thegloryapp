@@ -30,8 +30,11 @@ export default function GridView() {
   });
 
   const filteredUsers = useMemo(() => {
-    // Use database users if available, otherwise fall back to mock users
-    let result = dbUsers.length > 0 ? [...dbUsers] : [...mockUsers];
+    // Combine real DB users with mock users for demo
+    // Filter out any mock users that have the same ID as real users
+    const dbUserIds = new Set(dbUsers.map(u => u.id));
+    const filteredMockUsers = mockUsers.filter(u => !dbUserIds.has(u.id));
+    let result = [...dbUsers, ...filteredMockUsers];
 
     // Calculate accurate distances if we have user position
     if (position) {
@@ -46,8 +49,8 @@ export default function GridView() {
       });
     }
 
-    // Filter by intent (already done in hook for db users, but needed for mock users)
-    if (intentFilter !== 'all' && dbUsers.length === 0) {
+    // Filter by intent
+    if (intentFilter !== 'all') {
       result = result.filter((u) => u.intent === intentFilter);
     }
 
