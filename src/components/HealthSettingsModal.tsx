@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { XIcon } from './icons';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface HealthSettingsModalProps {
   onClose: () => void;
@@ -12,11 +13,13 @@ interface HealthSettingsModalProps {
 
 export default function HealthSettingsModal({ onClose }: HealthSettingsModalProps) {
   const { settings, loading, updateSettings } = useHealthSettings();
+  const { isSupported: pushSupported, permission: pushPermission, isSubscribed: pushSubscribed, subscribe: subscribePush, unsubscribe: unsubscribePush } = usePushNotifications();
   const [screenDays, setScreenDays] = useState(90);
   const [screenPartners, setScreenPartners] = useState(10);
   const [contactTracingOptIn, setContactTracingOptIn] = useState(false);
   const [prepReminders, setPrepReminders] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [togglingPush, setTogglingPush] = useState(false);
 
   // Initialize form with current settings
   useEffect(() => {
@@ -179,6 +182,49 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
               <p className="text-xs text-green-400">
                 You&apos;re helping keep the community safe. Thank you!
               </p>
+            </div>
+          )}
+
+          {/* Push Notifications - only show if contact tracing is enabled */}
+          {contactTracingOptIn && pushSupported && (
+            <div className="flex items-start justify-between gap-4 pt-2">
+              <div className="flex-1">
+                <h4 className="text-sm font-medium">Push Notifications</h4>
+                <p className="text-xs text-hole-muted mt-1">
+                  Get a discreet notification if you may have been exposed.
+                  Message will just say &quot;New notification&quot; - no details shown.
+                </p>
+                {pushPermission === 'denied' && (
+                  <p className="text-xs text-red-400 mt-1">
+                    Notifications blocked. Please enable in browser settings.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={togglingPush || pushPermission === 'denied'}
+                onClick={async () => {
+                  setTogglingPush(true);
+                  try {
+                    if (pushSubscribed) {
+                      await unsubscribePush();
+                    } else {
+                      await subscribePush();
+                    }
+                  } finally {
+                    setTogglingPush(false);
+                  }
+                }}
+                className={`w-12 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
+                  pushSubscribed ? 'bg-hole-accent' : 'bg-hole-surface'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    pushSubscribed ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
             </div>
           )}
         </section>

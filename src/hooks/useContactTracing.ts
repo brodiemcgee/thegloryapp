@@ -126,7 +126,39 @@ export function useContactTracing() {
 
     if (rpcError) throw rpcError;
 
-    return data as number; // Returns count of notifications sent
+    const notificationCount = data as number;
+
+    // If notifications were sent, trigger push notifications for recipients
+    if (notificationCount > 0) {
+      try {
+        // Get recent notifications we just created (within last minute)
+        const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+        const { data: recentNotifications } = await supabase
+          .from('contact_trace_notifications')
+          .select('recipient_user_id')
+          .eq('sti_type', stiType)
+          .gte('created_at', oneMinuteAgo);
+
+        if (recentNotifications) {
+          // Get unique recipient IDs
+          const recipientIds = Array.from(new Set(recentNotifications.map(n => n.recipient_user_id)));
+
+          // Send push notification to each recipient (fire and forget)
+          for (const recipientId of recipientIds) {
+            supabase.functions.invoke('send-push-notification', {
+              body: { user_id: recipientId },
+            }).catch(err => {
+              console.warn('Push notification failed:', err);
+            });
+          }
+        }
+      } catch (pushErr) {
+        // Don't fail the main operation if push fails
+        console.warn('Failed to send push notifications:', pushErr);
+      }
+    }
+
+    return notificationCount;
   };
 
   // Get unread notifications

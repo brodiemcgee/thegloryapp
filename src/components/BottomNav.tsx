@@ -3,6 +3,7 @@
 'use client';
 
 import { MapIcon, GridIcon, MessageIcon, HealthIcon, UserIcon } from './icons';
+import { useContactTracing } from '@/hooks/useContactTracing';
 
 type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
 
@@ -20,11 +21,15 @@ const tabs: { id: Tab; label: string; Icon: React.ComponentType<{ className?: st
 ];
 
 export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const { unreadCount } = useContactTracing();
+
   return (
     <nav className="bg-hole-surface border-t border-hole-border safe-bottom">
       <div className="flex justify-around items-center h-16">
         {tabs.map(({ id, label, Icon }) => {
           const isActive = activeTab === id;
+          const showHealthBadge = id === 'health' && unreadCount > 0;
+
           return (
             <button
               key={id}
@@ -38,7 +43,15 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="w-6 h-6 mb-1" />
+              <div className="relative">
+                <Icon className="w-6 h-6 mb-1" />
+                {showHealthBadge && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-medium">{label}</span>
             </button>
           );
