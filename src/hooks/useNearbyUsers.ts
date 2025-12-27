@@ -23,7 +23,7 @@ interface DbProfile {
   is_verified: boolean;
   is_online: boolean;
   last_active: string;
-  location: { type: string; coordinates: [number, number] } | null;
+  location_json: { type: string; coordinates: [number, number] } | null;
   ghost_mode: boolean;
   height_cm: number | null;
   weight_kg: number | null;
@@ -39,7 +39,15 @@ interface DbProfile {
   twitter_handle: string | null;
   looking_for: Record<string, unknown> | null;
   kinks: string[] | null;
-  photos: Array<{ id: string; url: string; is_primary: boolean; is_nsfw: boolean }>;
+  account_status: string | null;
+}
+
+interface DbPhoto {
+  id: string;
+  profile_id: string;
+  url: string;
+  is_primary: boolean;
+  is_nsfw: boolean;
 }
 
 export function useNearbyUsers(
@@ -65,26 +73,27 @@ export function useNearbyUsers(
     if (!authUser) return;
 
     try {
-      const { data, error: dbError } = await supabase
-        .from('profiles')
-        .select(`
-          id, username, display_name, avatar_url, bio, age, intent, availability,
-          is_verified, is_online, last_active, location, ghost_mode,
-          height_cm, weight_kg, body_type, ethnicity, position,
-          host_travel, smoker, drugs, safer_sex, hiv_status,
-          instagram_handle, twitter_handle, looking_for, kinks,
-          photos (id, url, is_primary, is_nsfw)
-        `)
-        .eq('id', authUser.id)
-        .single();
+      // Use RPC function to get profile with location as GeoJSON
+      const { data: profilesData, error: profilesError } = await supabase
+        .rpc('get_profiles_with_location');
 
-      if (dbError) {
-        console.error('Failed to fetch current user profile:', dbError);
+      if (profilesError) {
+        console.error('Failed to fetch current user profile:', profilesError);
         return;
       }
 
-      if (data) {
-        const profile = transformProfile(data);
+      const currentProfile = (profilesData || []).find(
+        (p: DbProfile) => p.id === authUser.id
+      );
+
+      if (currentProfile) {
+        // Fetch photos for current user
+        const { data: photosData } = await supabase
+          .from('photos')
+          .select('id, profile_id, url, is_primary, is_nsfw')
+          .eq('profile_id', authUser.id);
+
+        const profile = transformProfile(currentProfile, photosData || []);
         setCurrentUserProfile(profile);
       }
     } catch (err) {
@@ -93,18 +102,18 @@ export function useNearbyUsers(
   };
 
   // Transform a database profile to User type
-  const transformProfile = (profile: DbProfile): User => {
+  const transformProfile = (profile: DbProfile, photos: DbPhoto[] = []): User => {
     let location: { lat: number; lng: number } | undefined;
-    if (profile.location && typeof profile.location === 'object' && 'coordinates' in profile.location) {
-      const coords = profile.location as { coordinates: [number, number] };
+    if (profile.location_json && typeof profile.location_json === 'object' && 'coordinates' in profile.location_json) {
       location = {
-        lng: coords.coordinates[0],
-        lat: coords.coordinates[1],
+        lng: profile.location_json.coordinates[0],
+        lat: profile.location_json.coordinates[1],
       };
     }
 
-    const primaryPhoto = profile.photos?.find(p => p.is_primary);
-    const avatarUrl = profile.avatar_url || primaryPhoto?.url || profile.photos?.[0]?.url || null;
+    const profilePhotos = photos.filter(p => p.profile_id === profile.id);
+    const primaryPhoto = profilePhotos.find(p => p.is_primary);
+    const avatarUrl = profile.avatar_url || primaryPhoto?.url || profilePhotos[0]?.url || null;
 
     return {
       id: profile.id,
@@ -119,7 +128,7 @@ export function useNearbyUsers(
       is_online: profile.is_online,
       last_active: profile.last_active,
       location,
-      photos: profile.photos?.map(p => p.url) || [],
+      photos: profilePhotos.map(p => p.url) || [],
       height_cm: profile.height_cm || undefined,
       weight_kg: profile.weight_kg || undefined,
       body_type: profile.body_type as User['body_type'],
@@ -142,47 +151,39 @@ export function useNearbyUsers(
       setLoading(true);
       setError(null);
 
-      // Fetch profiles with their photos
-      const { data, error: dbError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          username,
-          display_name,
-          avatar_url,
-          bio,
-          age,
-          intent,
-          availability,
-          is_verified,
-          is_online,
-          last_active,
-          location,
-          ghost_mode,
-          height_cm,
-          weight_kg,
-          body_type,
-          ethnicity,
-          position,
-          host_travel,
-          smoker,
-          drugs,
-          safer_sex,
-          hiv_status,
-          instagram_handle,
-          twitter_handle,
-          looking_for,
-          kinks,
-          photos (id, url, is_primary, is_nsfw)
-        `)
-        .eq('ghost_mode', false)
-        .eq('account_status', 'active')
-        .order('last_active', { ascending: false });
+      // Fetch profiles using RPC function (returns location as GeoJSON)
+      const { data: profilesData, error: profilesError } = await supabase
+        .rpc('get_profiles_with_location');
 
-      if (dbError) throw dbError;
+      if (profilesError) throw profilesError;
+
+      // Filter for active, non-ghost profiles
+      const activeProfiles = (profilesData || []).filter(
+        (p: DbProfile) => !p.ghost_mode && p.account_status === 'active'
+      );
+
+      // Fetch all photos
+      const { data: photosData, error: photosError } = await supabase
+        .from('photos')
+        .select('id, profile_id, url, is_primary, is_nsfw');
+
+      if (photosError) {
+        console.warn('Failed to fetch photos:', photosError);
+      }
+
+      const photos: DbPhoto[] = photosData || [];
 
       // Transform database profiles to User type
-      const transformedUsers: User[] = (data || []).map((profile: DbProfile) => transformProfile(profile));
+      const transformedUsers: User[] = activeProfiles.map((profile: DbProfile) =>
+        transformProfile(profile, photos)
+      );
+
+      // Sort by last_active
+      transformedUsers.sort((a, b) => {
+        const aTime = a.last_active ? new Date(a.last_active).getTime() : 0;
+        const bTime = b.last_active ? new Date(b.last_active).getTime() : 0;
+        return bTime - aTime;
+      });
 
       setUsers(transformedUsers);
     } catch (err) {

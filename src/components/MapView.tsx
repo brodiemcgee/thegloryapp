@@ -143,7 +143,7 @@ export default function MapView() {
   // Filtered by all filter criteria
   const usersForMarkers = useMemo(() => {
     // Use only real database users with locations
-    let result = dbUsers.filter(u => u.location);
+    let result = (dbUsers || []).filter(u => u.location);
 
     // Filter by online status
     if (filters.online === 'online') {
