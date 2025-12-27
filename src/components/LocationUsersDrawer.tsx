@@ -92,7 +92,7 @@ export default function LocationUsersDrawer({
         {/* Users circles */}
         <div className="px-4 pb-4">
           {totalUsers > 0 ? (
-            <div className="flex flex-wrap gap-3 justify-center">
+            <div className="flex flex-wrap gap-3">
               {/* Current user if snapped */}
               {isCurrentUserSnapped && (
                 <div className="flex flex-col items-center gap-1">

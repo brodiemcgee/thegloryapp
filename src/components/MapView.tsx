@@ -13,6 +13,7 @@ import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon, MenuIc
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
+import UserProfile from './UserProfile';
 import { Location, User, Intent } from '@/types';
 import { calculateDistance, isWithinRadius, offsetLocation, findNearestLocation } from '@/lib/geo';
 import { useSettings } from '@/hooks/useSettings';
@@ -42,6 +43,7 @@ export default function MapView() {
   const [viewMode, setViewMode] = useState<'users' | 'heatmap'>('users');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedLocationForUsers, setSelectedLocationForUsers] = useState<Location | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showMapMenu, setShowMapMenu] = useState(false);
@@ -751,7 +753,18 @@ export default function MapView() {
           currentUserId={currentUserProfile?.id}
           isCurrentUserSnapped={snappedLocation?.id === selectedLocationForUsers.id}
           onClose={() => setSelectedLocationForUsers(null)}
+          onUserClick={(user) => {
+            setSelectedUser(user);
+            setSelectedLocationForUsers(null);
+          }}
         />
+      )}
+
+      {/* User profile overlay */}
+      {selectedUser && (
+        <div className="absolute inset-0 z-30">
+          <UserProfile user={selectedUser} onBack={() => setSelectedUser(null)} />
+        </div>
       )}
     </div>
   );
