@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import MapView from '@/components/MapView';
@@ -10,6 +10,7 @@ import GridView from '@/components/GridView';
 import MessagesView from '@/components/MessagesView';
 import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
+import InAppNotification from '@/components/InAppNotification';
 import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 
 type Tab = 'map' | 'grid' | 'messages' | 'health' | 'me';
@@ -27,6 +28,15 @@ export default function Home() {
       window.history.replaceState({}, '', '/');
     }
   }, [searchParams]);
+
+  // Handle in-app notification navigation
+  const handleNotificationNavigate = useCallback((url: string) => {
+    const urlObj = new URL(url, window.location.origin);
+    const tabParam = urlObj.searchParams.get('tab');
+    if (tabParam && ['map', 'grid', 'messages', 'health', 'me'].includes(tabParam)) {
+      setActiveTab(tabParam as Tab);
+    }
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -48,6 +58,9 @@ export default function Home() {
   return (
     <ContactTracingProvider>
       <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
+        {/* In-app notifications */}
+        <InAppNotification onNavigate={handleNotificationNavigate} />
+
         {/* Main content area */}
         <div className="flex-1 overflow-hidden">
           {renderContent()}

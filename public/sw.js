@@ -1,5 +1,5 @@
 // Service Worker for push notifications
-// Version 2 - adds click-to-navigate
+// Version 3 - adds in-app notifications with sound
 
 self.addEventListener('push', function(event) {
   if (!event.data) return;
@@ -20,8 +20,23 @@ self.addEventListener('push', function(event) {
     silent: false,
   };
 
+  // Post message to all clients so in-app notification can show
   event.waitUntil(
-    self.registration.showNotification(data.title || 'thehole.app', options)
+    Promise.all([
+      self.registration.showNotification(data.title || 'thehole.app', options),
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+        clientList.forEach(function(client) {
+          client.postMessage({
+            type: 'PUSH_RECEIVED',
+            payload: {
+              title: data.title || 'thehole.app',
+              body: data.body || 'You have a new notification',
+              url: data.url || '/',
+            },
+          });
+        });
+      }),
+    ])
   );
 });
 
