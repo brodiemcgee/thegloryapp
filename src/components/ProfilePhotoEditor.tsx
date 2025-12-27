@@ -4,11 +4,13 @@
 
 import { useState, useEffect } from 'react';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
-import { deletePhoto, listUserPhotos, getPublicUrl } from '@/lib/storage';
+import { deletePhoto, getPublicUrl, listUserPhotos } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import PhotoUploader from './PhotoUploader';
 import { XIcon, CheckIcon } from './icons';
 
 export interface ProfilePhoto {
+  id?: string;
   name: string;
   path: string;
   url: string;
@@ -36,17 +38,84 @@ export default function ProfilePhotoEditor({
     loadPhotos();
   }, [userId]);
 
+  // Sync photos from storage to database if they don't exist yet
+  const syncStorageToDatabase = async () => {
+    try {
+      // Get photos from storage
+      const storageFiles = await listUserPhotos(userId);
+      if (!storageFiles || storageFiles.length === 0) return;
+
+      // Get existing photos from database
+      const { data: dbPhotos } = await supabase
+        .from('photos')
+        .select('url')
+        .eq('profile_id', userId);
+
+      const dbUrls = new Set((dbPhotos || []).map(p => p.url));
+
+      // Find photos in storage that aren't in database
+      const photosToSync = storageFiles.filter(file => {
+        const url = getPublicUrl('avatars', `${userId}/${file.name}`);
+        return !dbUrls.has(url);
+      });
+
+      if (photosToSync.length === 0) return;
+
+      // Insert missing photos into database
+      const inserts = photosToSync.map((file, index) => ({
+        profile_id: userId,
+        url: getPublicUrl('avatars', `${userId}/${file.name}`),
+        is_primary: index === 0 && dbPhotos?.length === 0, // First photo is primary if no existing
+        is_nsfw: false,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('photos')
+        .insert(inserts);
+
+      if (insertError) {
+        console.error('Failed to sync photos to database:', insertError);
+      } else {
+        console.log(`Synced ${inserts.length} photos from storage to database`);
+      }
+    } catch (err) {
+      console.error('Error syncing storage photos:', err);
+    }
+  };
+
+  // Load photos from database (photos table)
   const loadPhotos = async () => {
     try {
       setLoading(true);
-      const files = await listUserPhotos(userId);
-      const photoList: ProfilePhoto[] = files.map((file) => ({
-        name: file.name,
-        path: `${userId}/${file.name}`,
-        url: getPublicUrl('avatars', `${userId}/${file.name}`),
+
+      // First, sync any photos from storage that aren't in database
+      await syncStorageToDatabase();
+
+      // Then load all photos from database
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('profile_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const photoList: ProfilePhoto[] = (data || []).map((photo) => ({
+        id: photo.id,
+        name: photo.url.split('/').pop() || '',
+        path: photo.url,
+        url: photo.url,
+        isPrimary: photo.is_primary,
+        isNSFW: photo.is_nsfw,
       }));
       setPhotos(photoList);
       onPhotosChange?.(photoList);
+
+      // Update avatar_url if we have photos but no avatar set
+      if (photoList.length > 0) {
+        const primaryPhoto = photoList.find(p => p.isPrimary) || photoList[0];
+        await updateAvatarUrl(primaryPhoto.url);
+      }
     } catch (err) {
       console.error('Failed to load photos:', err);
     } finally {
@@ -54,24 +123,64 @@ export default function ProfilePhotoEditor({
     }
   };
 
+  // Update avatar_url in profiles table
+  const updateAvatarUrl = async (url: string | null) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: url })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Failed to update avatar_url:', error);
+    }
+  };
+
   const handleUpload = async (file: File) => {
     try {
       const result = await upload(file, userId, 'profile');
+      const isPrimary = photos.length === 0; // First photo is primary
+
+      // Always update avatar_url for primary photo (do this first as fallback)
+      if (isPrimary) {
+        await updateAvatarUrl(result.url);
+      }
+
+      // Try to save to photos table
+      const { data: photoData, error: dbError } = await supabase
+        .from('photos')
+        .insert({
+          profile_id: userId,
+          url: result.url,
+          is_primary: isPrimary,
+          is_nsfw: false,
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Failed to save photo to database:', dbError);
+        // Photo is in storage and avatar_url is updated, so continue
+        // but with a generated ID
+      }
 
       const newPhoto: ProfilePhoto = {
+        id: photoData?.id || crypto.randomUUID(),
         name: result.path.split('/').pop() || '',
         path: result.path,
         url: result.url,
-        isPrimary: photos.length === 0, // First photo is primary
+        isPrimary: isPrimary,
+        isNSFW: false,
       };
 
       const updatedPhotos = [...photos, newPhoto];
       setPhotos(updatedPhotos);
       onPhotosChange?.(updatedPhotos);
+
       setShowUploader(false);
       reset();
     } catch (err) {
       console.error('Upload failed:', err);
+      alert('Failed to upload photo. Please try again.');
     }
   };
 
@@ -79,12 +188,36 @@ export default function ProfilePhotoEditor({
     if (!confirm('Delete this photo?')) return;
 
     try {
-      await deletePhoto('avatars', photo.path);
+      // Delete from database
+      if (photo.id) {
+        const { error: dbError } = await supabase
+          .from('photos')
+          .delete()
+          .eq('id', photo.id);
+
+        if (dbError) throw dbError;
+      }
+
+      // Delete from storage
+      const storagePath = photo.path.includes('/') ? photo.path : `${userId}/${photo.name}`;
+      await deletePhoto('avatars', storagePath);
+
       const updatedPhotos = photos.filter((p) => p.path !== photo.path);
 
       // If deleted photo was primary, make first photo primary
       if (photo.isPrimary && updatedPhotos.length > 0) {
         updatedPhotos[0].isPrimary = true;
+        // Update in database
+        if (updatedPhotos[0].id) {
+          await supabase
+            .from('photos')
+            .update({ is_primary: true })
+            .eq('id', updatedPhotos[0].id);
+        }
+        await updateAvatarUrl(updatedPhotos[0].url);
+      } else if (photo.isPrimary) {
+        // No more photos, clear avatar_url
+        await updateAvatarUrl(null);
       }
 
       setPhotos(updatedPhotos);
@@ -95,21 +228,54 @@ export default function ProfilePhotoEditor({
     }
   };
 
-  const handleSetPrimary = (photo: ProfilePhoto) => {
-    const updatedPhotos = photos.map((p) => ({
-      ...p,
-      isPrimary: p.path === photo.path,
-    }));
-    setPhotos(updatedPhotos);
-    onPhotosChange?.(updatedPhotos);
+  const handleSetPrimary = async (photo: ProfilePhoto) => {
+    try {
+      // Update all photos in database - set all to non-primary first
+      await supabase
+        .from('photos')
+        .update({ is_primary: false })
+        .eq('profile_id', userId);
+
+      // Set this photo as primary
+      if (photo.id) {
+        await supabase
+          .from('photos')
+          .update({ is_primary: true })
+          .eq('id', photo.id);
+      }
+
+      // Update avatar_url
+      await updateAvatarUrl(photo.url);
+
+      const updatedPhotos = photos.map((p) => ({
+        ...p,
+        isPrimary: p.path === photo.path,
+      }));
+      setPhotos(updatedPhotos);
+      onPhotosChange?.(updatedPhotos);
+    } catch (err) {
+      console.error('Failed to set primary:', err);
+    }
   };
 
-  const handleToggleNSFW = (photo: ProfilePhoto) => {
-    const updatedPhotos = photos.map((p) =>
-      p.path === photo.path ? { ...p, isNSFW: !p.isNSFW } : p
-    );
-    setPhotos(updatedPhotos);
-    onPhotosChange?.(updatedPhotos);
+  const handleToggleNSFW = async (photo: ProfilePhoto) => {
+    const newNSFW = !photo.isNSFW;
+    try {
+      if (photo.id) {
+        await supabase
+          .from('photos')
+          .update({ is_nsfw: newNSFW })
+          .eq('id', photo.id);
+      }
+
+      const updatedPhotos = photos.map((p) =>
+        p.path === photo.path ? { ...p, isNSFW: newNSFW } : p
+      );
+      setPhotos(updatedPhotos);
+      onPhotosChange?.(updatedPhotos);
+    } catch (err) {
+      console.error('Failed to toggle NSFW:', err);
+    }
   };
 
   if (showUploader) {

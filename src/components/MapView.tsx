@@ -8,6 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { mockUsers, mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
+import { useNearbyUsers } from '@/hooks/useNearbyUsers';
 import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon } from './icons';
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
@@ -45,6 +46,12 @@ export default function MapView() {
   const { position, loading: geoLoading, refresh: refreshLocation } = useGeolocation();
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
 
+  // Fetch real users from database
+  const { users: dbUsers } = useNearbyUsers(position, {
+    radiusKm: DEFAULT_RADIUS_KM,
+    intentFilter,
+  });
+
   // Default center (Sydney) - will use user position when available
   const defaultCenter: [number, number] = [151.2093, -33.8688];
 
@@ -60,24 +67,24 @@ export default function MapView() {
     }
   }, [position, updatePresence]);
 
-  // Combine real online users from presence with mock users
-  // In production, this would only use onlineUsers from presence
+  // Use database users if available, otherwise fall back to mock users
   // Memoized to prevent marker flickering from unnecessary re-renders
   const filteredUsers = useMemo(() => {
-    return mockUsers.filter((user) => {
+    const sourceUsers = dbUsers.length > 0 ? dbUsers : mockUsers;
+    return sourceUsers.filter((user) => {
       // Filter by location if position available
       if (position && user.location) {
         if (!isWithinRadius(user.location, position, DEFAULT_RADIUS_KM)) {
           return false;
         }
       }
-      // Filter by intent
-      if (intentFilter !== 'all' && user.intent !== intentFilter) {
+      // Filter by intent (already filtered in hook for db users)
+      if (intentFilter !== 'all' && dbUsers.length === 0 && user.intent !== intentFilter) {
         return false;
       }
       return true;
     });
-  }, [position, intentFilter]);
+  }, [position, intentFilter, dbUsers]);
 
   // Initialize map
   useEffect(() => {

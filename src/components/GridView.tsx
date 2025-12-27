@@ -9,7 +9,8 @@ import { FilterIcon, GridIcon, CheckIcon } from './icons';
 import UserCard from './UserCard';
 import UserProfile from './UserProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { calculateDistance, sortByDistance } from '@/lib/geo';
+import { useNearbyUsers } from '@/hooks/useNearbyUsers';
+import { calculateDistance } from '@/lib/geo';
 
 type SortOption = 'distance' | 'active';
 type FilterOption = Intent | 'all';
@@ -23,13 +24,14 @@ export default function GridView() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { position } = useGeolocation();
 
-  const filteredUsers = useMemo(() => {
-    let result = [...mockUsers];
+  // Fetch real users from database
+  const { users: dbUsers, currentUserProfile, loading } = useNearbyUsers(position, {
+    intentFilter,
+  });
 
-    // Filter out users with ghost mode enabled (they won't appear in the grid)
-    // Note: In production, this would be handled by the backend/database query
-    // Ghost mode users simply won't be returned in API responses
-    // For now, we'll assume all mock users are visible (no ghost_mode property)
+  const filteredUsers = useMemo(() => {
+    // Use database users if available, otherwise fall back to mock users
+    let result = dbUsers.length > 0 ? [...dbUsers] : [...mockUsers];
 
     // Calculate accurate distances if we have user position
     if (position) {
@@ -44,8 +46,8 @@ export default function GridView() {
       });
     }
 
-    // Filter by intent
-    if (intentFilter !== 'all') {
+    // Filter by intent (already done in hook for db users, but needed for mock users)
+    if (intentFilter !== 'all' && dbUsers.length === 0) {
       result = result.filter((u) => u.intent === intentFilter);
     }
 
@@ -61,9 +63,12 @@ export default function GridView() {
       result.sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime());
     }
 
-    // Always show current user first
-    return [{ ...currentUser, distance_km: 0 }, ...result];
-  }, [intentFilter, verifiedOnly, sortBy, position]);
+    // Always show current user first (use db profile if available)
+    const currentProfile = currentUserProfile || currentUser;
+    // Remove current user from result if already there
+    result = result.filter(u => u.id !== currentProfile.id);
+    return [{ ...currentProfile, distance_km: 0 }, ...result];
+  }, [dbUsers, intentFilter, verifiedOnly, sortBy, position, currentUserProfile]);
 
   const intentOptions: { value: FilterOption; label: string }[] = [
     { value: 'all', label: 'All' },
