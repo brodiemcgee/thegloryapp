@@ -73,10 +73,11 @@ export default function EncounterFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
-        <div className="flex items-center justify-between">
+      <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg flex flex-col max-h-[85vh] mb-16 sm:mb-0">
+        {/* Fixed header */}
+        <div className="flex items-center justify-between p-4 border-b border-hole-border shrink-0">
           <h2 className="text-lg font-semibold">
             {username ? `Log Encounter with ${username}` : 'Log Encounter'}
           </h2>
@@ -87,6 +88,9 @@ export default function EncounterFormModal({
             <XIcon className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-auto p-4 space-y-4">
 
         {/* Previous encounters summary */}
         {previousEncounterCount > 0 && (
@@ -264,21 +268,25 @@ export default function EncounterFormModal({
             rows={3}
           />
         </div>
+        </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 bg-hole-surface border border-hole-border rounded-lg font-medium hover:bg-hole-border transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!metAt || saving}
-            className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Encounter'}
-          </button>
+        {/* Fixed footer with buttons */}
+        <div className="p-4 border-t border-hole-border shrink-0 bg-hole-bg">
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 bg-hole-surface border border-hole-border rounded-lg font-medium hover:bg-hole-border transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!metAt || saving}
+              className="flex-1 py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Encounter'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
