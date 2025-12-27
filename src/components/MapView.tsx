@@ -763,7 +763,7 @@ export default function MapView() {
 
       {/* User profile overlay */}
       {selectedUser && (
-        <div className="absolute inset-0 z-30">
+        <div className="absolute inset-0 z-[200]">
           <UserProfile user={selectedUser} onBack={() => setSelectedUser(null)} />
         </div>
       )}
