@@ -44,7 +44,8 @@
       "mcp__supabase__list_migrations",
       "Bash(git checkout:*)",
       "Bash(gh auth:*)",
-      "Bash(GIT_TERMINAL_PROMPT=0 git push:*)"
+      "Bash(GIT_TERMINAL_PROMPT=0 git push:*)",
+      "WebFetch(domain:www.hookbook.app)"
     ]
   },
   "enableAllProjectMcpServers": true,

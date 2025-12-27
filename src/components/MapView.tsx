@@ -318,6 +318,39 @@ export default function MapView() {
     return locationUserMap;
   }, [onlineUsers, filteredUsers]);
 
+  // Get icon SVG based on location type
+  const getLocationIcon = (type: Location['type']): string => {
+    switch (type) {
+      case 'public':
+        // Restroom/WC icon
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/>
+        </svg>`;
+      case 'private':
+        // House icon
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>`;
+      case 'cruising':
+        // Tree/park icon
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2L8 8h3v4H8l4 6 4-6h-3V8h3L12 2zM5 18v2h14v-2H5z"/>
+        </svg>`;
+      case 'venue':
+        // Bar/drink icon
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"/>
+        </svg>`;
+      default:
+        return `<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>`;
+    }
+  };
+
+  // Location marker color (purple - distinct from user intent colors)
+  const locationColor = '#a855f7';
+
   // Update location markers with user count badges
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
@@ -335,64 +368,72 @@ export default function MapView() {
       const el = document.createElement('div');
       el.className = 'location-marker';
       el.style.cssText = `
-        width: 40px;
-        height: 52px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        width: 48px;
+        height: 48px;
+        position: relative;
         cursor: pointer;
         z-index: 100;
       `;
 
+      // Create ring/border element (like user markers)
+      const ring = document.createElement('div');
+      ring.style.cssText = `
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 3px solid ${locationColor};
+        box-shadow: 0 0 0 2px ${locationColor}40, 0 0 12px ${locationColor}60;
+        transition: box-shadow 0.15s ease-out;
+        pointer-events: none;
+      `;
+
+      // Create inner circle with icon
       const inner = document.createElement('div');
       inner.style.cssText = `
-        width: 28px;
-        height: 28px;
-        background: #3b82f6;
-        border: 2px solid #ffffff;
-        border-radius: 6px;
-        transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+        position: absolute;
+        inset: 4px;
+        border-radius: 50%;
+        background: ${locationColor};
         display: flex;
         align-items: center;
         justify-content: center;
+        pointer-events: none;
       `;
+      inner.innerHTML = getLocationIcon(location.type);
 
-      // Add location icon inside
-      inner.innerHTML = `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-      `;
-
+      el.appendChild(ring);
       el.appendChild(inner);
 
       // Add user count badge if there are users
       if (totalCount > 0) {
         const badge = document.createElement('div');
         badge.style.cssText = `
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
           background: #ef4444;
           color: white;
           font-size: 10px;
           font-weight: 600;
-          padding: 1px 5px;
-          border-radius: 8px;
-          margin-top: 2px;
-          min-width: 16px;
-          text-align: center;
-          border: 1px solid #0a0a0a;
+          min-width: 18px;
+          height: 18px;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid #0a0a0a;
+          pointer-events: none;
         `;
         badge.textContent = totalCount.toString();
         el.appendChild(badge);
       }
 
       el.addEventListener('mouseenter', () => {
-        inner.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
-        inner.style.borderColor = '#60a5fa';
+        ring.style.boxShadow = `0 0 0 4px ${locationColor}50, 0 0 16px ${locationColor}70`;
       });
 
       el.addEventListener('mouseleave', () => {
-        inner.style.boxShadow = 'none';
-        inner.style.borderColor = '#ffffff';
+        ring.style.boxShadow = `0 0 0 2px ${locationColor}40, 0 0 12px ${locationColor}60`;
       });
 
       el.addEventListener('click', () => {
@@ -400,7 +441,7 @@ export default function MapView() {
         setSelectedLocationForUsers(location);
       });
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat([location.lng, location.lat])
         .addTo(map.current!);
 
