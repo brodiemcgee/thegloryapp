@@ -357,7 +357,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           </div>
         ) : (
           visibleMessages.map((msg) => {
-            const isMine = user && msg.sender_id === user.id;
+            const isMine = !!(user && msg.sender_id === user.id);
 
             // Render album share message
             if (msg.album_share) {
