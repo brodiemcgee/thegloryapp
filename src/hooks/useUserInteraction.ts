@@ -29,7 +29,7 @@ export interface Encounter {
   location_lat: number | null;
   location_lng: number | null;
   location_address: string | null;
-  protection_used: 'yes' | 'no' | 'partial' | null;
+  protection_used: 'yes' | 'no' | 'na' | null;
   created_at: string;
 }
 
@@ -139,12 +139,11 @@ export function useUserInteraction(targetUserId: string) {
     notes?: string;
     rating?: number;
     activities?: string[];
-    experience_tags?: string[];
     location_type?: string;
     location_lat?: number;
     location_lng?: number;
     location_address?: string;
-    protection_used?: 'yes' | 'no' | 'partial';
+    protection_used?: 'yes' | 'no' | 'na';
   }) => {
     if (!user) return null;
 
@@ -157,7 +156,6 @@ export function useUserInteraction(targetUserId: string) {
         notes: encounter.notes || null,
         rating: encounter.rating || null,
         activities: encounter.activities || null,
-        experience_tags: encounter.experience_tags || null,
         location_type: encounter.location_type || null,
         location_lat: encounter.location_lat || null,
         location_lng: encounter.location_lng || null,

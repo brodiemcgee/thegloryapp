@@ -19,7 +19,7 @@ export interface Encounter {
   location_lat: number | null;
   location_lng: number | null;
   location_address: string | null;
-  protection_used: 'yes' | 'no' | 'partial' | null;
+  protection_used: 'yes' | 'no' | 'na' | null;
   created_at: string;
   // Joined profile data for app users
   target_user?: {
@@ -195,8 +195,7 @@ export function useEncounters() {
     notes?: string,
     activities?: string[],
     locationType?: string,
-    protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[]
+    protectionUsed?: 'yes' | 'no' | 'na'
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -211,7 +210,6 @@ export function useEncounters() {
         is_anonymous: false,
         anonymous_name: null,
         activities: activities || null,
-        experience_tags: experienceTags || null,
         location_type: locationType || null,
         protection_used: protectionUsed || null,
       })
@@ -241,8 +239,7 @@ export function useEncounters() {
     notes?: string,
     activities?: string[],
     locationType?: string,
-    protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[],
+    protectionUsed?: 'yes' | 'no' | 'na',
     locationLat?: number,
     locationLng?: number,
     locationAddress?: string
@@ -260,7 +257,6 @@ export function useEncounters() {
         is_anonymous: true,
         anonymous_name: name || null,
         activities: activities || null,
-        experience_tags: experienceTags || null,
         location_type: locationType || null,
         location_lat: locationLat || null,
         location_lng: locationLng || null,

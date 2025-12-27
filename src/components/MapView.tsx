@@ -9,7 +9,7 @@ import { mockUsers, mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePresence } from '@/hooks/usePresence';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
-import { FilterIcon, CrosshairIcon, LayersIcon, NavigationIcon, PlusIcon, MenuIcon } from './icons';
+import { FilterIcon, CrosshairIcon, NavigationIcon, PlusIcon, MenuIcon } from './icons';
 import LocationDrawer from './LocationDrawer';
 import MapHeatmap from './MapHeatmap';
 import AddLocationModal from './AddLocationModal';
@@ -722,22 +722,34 @@ export default function MapView() {
                   <span>200m</span>
                 </div>
               </div>
+
+              {/* Divider */}
+              <div className="border-t border-hole-border" />
+
+              {/* Heatmap toggle */}
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-white">Show Heatmap</span>
+                  <button
+                    onClick={toggleViewMode}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      viewMode === 'heatmap' ? 'bg-hole-accent' : 'bg-hole-border'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        viewMode === 'heatmap' ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-xs text-hole-muted mt-1">
+                  Show user density instead of individual markers
+                </p>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Heatmap toggle */}
-        <button
-          onClick={toggleViewMode}
-          className={`p-3 border border-hole-border rounded-full touch-target shadow-lg transition-all ${
-            viewMode === 'heatmap'
-              ? 'bg-hole-accent text-white'
-              : 'bg-hole-surface hover:bg-hole-border'
-          }`}
-          aria-label="Toggle heatmap"
-        >
-          <LayersIcon className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Bottom right buttons */}

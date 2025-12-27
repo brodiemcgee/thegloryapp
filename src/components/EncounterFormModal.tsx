@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { XIcon } from './icons';
-import { ACTIVITY_OPTIONS, EXPERIENCE_TAG_OPTIONS } from './ManualEncounterModal';
+import { ACTIVITY_OPTIONS } from './ManualEncounterModal';
 import LocationPicker from './LocationPicker';
 import { LocationData } from '@/hooks/useSavedLocations';
 
@@ -15,12 +15,11 @@ interface EncounterFormModalProps {
     notes?: string;
     rating?: number;
     activities?: string[];
-    experience_tags?: string[];
     location_type?: string;
     location_lat?: number;
     location_lng?: number;
     location_address?: string;
-    protection_used?: 'yes' | 'no' | 'partial';
+    protection_used?: 'yes' | 'no' | 'na';
   }) => Promise<void>;
   username?: string; // Optional - for displaying who the encounter is with
   previousEncounterCount?: number; // How many times you've met before
@@ -36,9 +35,8 @@ export default function EncounterFormModal({
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [activities, setActivities] = useState<string[]>([]);
-  const [experienceTags, setExperienceTags] = useState<string[]>([]);
   const [location, setLocation] = useState<LocationData | null>(null);
-  const [protectionUsed, setProtectionUsed] = useState<'yes' | 'no' | 'partial' | ''>('');
+  const [protectionUsed, setProtectionUsed] = useState<'yes' | 'no' | 'na' | ''>('');
   const [saving, setSaving] = useState(false);
 
   const toggleActivity = (activityId: string) => {
@@ -46,14 +44,6 @@ export default function EncounterFormModal({
       prev.includes(activityId)
         ? prev.filter((a) => a !== activityId)
         : [...prev, activityId]
-    );
-  };
-
-  const toggleExperienceTag = (tagId: string) => {
-    setExperienceTags((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((t) => t !== tagId)
-        : [...prev, tagId]
     );
   };
 
@@ -67,7 +57,6 @@ export default function EncounterFormModal({
         notes: notes.trim() || undefined,
         rating: rating || undefined,
         activities: activities.length > 0 ? activities : undefined,
-        experience_tags: experienceTags.length > 0 ? experienceTags : undefined,
         location_type: location?.name || undefined,
         location_lat: location?.lat && location.lat !== 0 ? location.lat : undefined,
         location_lng: location?.lng && location.lng !== 0 ? location.lng : undefined,
@@ -211,17 +200,6 @@ export default function EncounterFormModal({
             </button>
             <button
               type="button"
-              onClick={() => setProtectionUsed(protectionUsed === 'partial' ? '' : 'partial')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                protectionUsed === 'partial'
-                  ? 'bg-yellow-500 text-black'
-                  : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
-              }`}
-            >
-              Partial
-            </button>
-            <button
-              type="button"
               onClick={() => setProtectionUsed(protectionUsed === 'no' ? '' : 'no')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 protectionUsed === 'no'
@@ -230,6 +208,17 @@ export default function EncounterFormModal({
               }`}
             >
               No
+            </button>
+            <button
+              type="button"
+              onClick={() => setProtectionUsed(protectionUsed === 'na' ? '' : 'na')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                protectionUsed === 'na'
+                  ? 'bg-gray-500 text-white'
+                  : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
+              }`}
+            >
+              N/A
             </button>
           </div>
         </div>
@@ -259,27 +248,6 @@ export default function EncounterFormModal({
                     d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
                   />
                 </svg>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Experience Tags */}
-        <div>
-          <label className="text-sm text-hole-muted mb-2 block">How would you describe it? (optional)</label>
-          <div className="flex flex-wrap gap-2">
-            {EXPERIENCE_TAG_OPTIONS.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleExperienceTag(tag.id)}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  experienceTags.includes(tag.id)
-                    ? `${tag.color} text-white`
-                    : 'bg-hole-surface border border-hole-border hover:bg-hole-border'
-                }`}
-              >
-                {tag.label}
               </button>
             ))}
           </div>
