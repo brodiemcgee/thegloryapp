@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { currentUser } from '@/data/mockData';
 import { useSettings } from '@/hooks/useSettings';
 import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon } from './icons';
@@ -18,6 +18,7 @@ import SubscriptionModal from './SubscriptionModal';
 import ProfileViewersScreen from './ProfileViewersScreen';
 import PaywallModal from './PaywallModal';
 import { User } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileView() {
   const { settings, toggleSfwMode, toggleLocation, updateSettings } = useSettings();
@@ -64,6 +65,40 @@ export default function ProfileView() {
     setUser({ ...user, ...updates });
     // TODO: Save to Supabase
   };
+
+  // Load photos from database when user is authenticated
+  useEffect(() => {
+    if (!authUser) return;
+
+    const loadPhotos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('photos')
+          .select('*')
+          .eq('profile_id', authUser.id)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Error loading photos:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const photoUrls = data.map((photo) => photo.url);
+          const primaryPhoto = data.find((p) => p.is_primary) || data[0];
+          setUser((prev) => ({
+            ...prev,
+            photos: photoUrls,
+            avatar_url: primaryPhoto?.url || null,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to load photos:', err);
+      }
+    };
+
+    loadPhotos();
+  }, [authUser]);
 
   if (showDetailsEditor) {
     return (
