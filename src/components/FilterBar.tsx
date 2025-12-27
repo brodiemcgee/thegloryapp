@@ -43,13 +43,8 @@ const ONLINE_OPTIONS: { value: 'all' | 'online' | 'recent'; label: string }[] = 
   { value: 'recent', label: 'Recent' },
 ];
 
-const AGE_OPTIONS: { value: [number, number] | null; label: string }[] = [
-  { value: null, label: 'Any Age' },
-  { value: [18, 25], label: '18-25' },
-  { value: [25, 35], label: '25-35' },
-  { value: [35, 45], label: '35-45' },
-  { value: [45, 99], label: '45+' },
-];
+const MIN_AGE = 18;
+const MAX_AGE = 70;
 
 export default function FilterBar({ filters, onChange, showFavorites = true }: FilterBarProps) {
   const [expandedFilter, setExpandedFilter] = useState<string | null>(null);
@@ -121,7 +116,7 @@ export default function FilterBar({ filters, onChange, showFavorites = true }: F
               : 'bg-hole-surface text-gray-300 hover:bg-hole-border'
           }`}
         >
-          {filters.ageRange ? `${filters.ageRange[0]}-${filters.ageRange[1] === 99 ? '+' : filters.ageRange[1]}` : 'Age'}
+          {filters.ageRange ? `${filters.ageRange[0]}-${filters.ageRange[1]}` : 'Age'}
         </button>
 
         {/* Position filter */}
@@ -199,23 +194,64 @@ export default function FilterBar({ filters, onChange, showFavorites = true }: F
           )}
 
           {expandedFilter === 'age' && (
-            <div className="flex flex-wrap gap-2">
-              {AGE_OPTIONS.map((opt, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    onChange({ ...filters, ageRange: opt.value });
-                    setExpandedFilter(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    JSON.stringify(filters.ageRange) === JSON.stringify(opt.value)
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-hole-border text-gray-300 hover:bg-hole-muted'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-300">
+                  Age: {filters.ageRange ? `${filters.ageRange[0]} - ${filters.ageRange[1]}` : `${MIN_AGE} - ${MAX_AGE}`}
+                </span>
+                {filters.ageRange && (
+                  <button
+                    onClick={() => onChange({ ...filters, ageRange: null })}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-hole-muted w-8">{MIN_AGE}</span>
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs text-hole-muted block mb-1">Min</label>
+                      <input
+                        type="range"
+                        min={MIN_AGE}
+                        max={MAX_AGE}
+                        value={filters.ageRange?.[0] ?? MIN_AGE}
+                        onChange={(e) => {
+                          const minVal = Number(e.target.value);
+                          const maxVal = filters.ageRange?.[1] ?? MAX_AGE;
+                          onChange({
+                            ...filters,
+                            ageRange: [Math.min(minVal, maxVal - 1), maxVal]
+                          });
+                        }}
+                        className="w-full h-2 bg-hole-border rounded-lg appearance-none cursor-pointer accent-purple-500"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-hole-muted block mb-1">Max</label>
+                      <input
+                        type="range"
+                        min={MIN_AGE}
+                        max={MAX_AGE}
+                        value={filters.ageRange?.[1] ?? MAX_AGE}
+                        onChange={(e) => {
+                          const maxVal = Number(e.target.value);
+                          const minVal = filters.ageRange?.[0] ?? MIN_AGE;
+                          onChange({
+                            ...filters,
+                            ageRange: [minVal, Math.max(maxVal, minVal + 1)]
+                          });
+                        }}
+                        className="w-full h-2 bg-hole-border rounded-lg appearance-none cursor-pointer accent-purple-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs text-hole-muted w-8 text-right">{MAX_AGE}</span>
+              </div>
             </div>
           )}
 

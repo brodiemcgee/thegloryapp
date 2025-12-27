@@ -18,6 +18,7 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
   const [screenPartners, setScreenPartners] = useState(10);
   const [contactTracingOptIn, setContactTracingOptIn] = useState(false);
   const [prepReminders, setPrepReminders] = useState(false);
+  const [prepReminderTime, setPrepReminderTime] = useState('09:00');
   const [saving, setSaving] = useState(false);
   const [togglingPush, setTogglingPush] = useState(false);
 
@@ -28,6 +29,9 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
       setScreenPartners(settings.screen_reminder_partners);
       setContactTracingOptIn(settings.contact_tracing_opted_in);
       setPrepReminders(settings.prep_reminders_enabled);
+      // Handle time format (could be HH:MM:SS from DB)
+      const time = settings.prep_reminder_time?.slice(0, 5) || '09:00';
+      setPrepReminderTime(time);
     }
   }, [settings]);
 
@@ -39,6 +43,7 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
         screen_reminder_partners: screenPartners,
         contact_tracing_opted_in: contactTracingOptIn,
         prep_reminders_enabled: prepReminders,
+        prep_reminder_time: prepReminderTime,
       });
       onClose();
     } catch (err) {
@@ -129,7 +134,7 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium">PrEP Reminders</h3>
+              <h3 className="text-sm font-medium">Medication Reminders</h3>
               <p className="text-xs text-hole-muted mt-1">
                 Get reminded to take your daily PrEP
               </p>
@@ -148,6 +153,60 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
               />
             </button>
           </div>
+
+          {/* Time picker - show when reminders enabled */}
+          {prepReminders && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-hole-muted mb-2 block">
+                  Reminder time
+                </label>
+                <input
+                  type="time"
+                  value={prepReminderTime}
+                  onChange={(e) => setPrepReminderTime(e.target.value)}
+                  className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
+                />
+              </div>
+
+              {/* Push notification requirement */}
+              {pushSupported && !pushSubscribed && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                  <p className="text-xs text-yellow-400 mb-2">
+                    Enable push notifications to receive reminders even when the app is closed.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setTogglingPush(true);
+                      try {
+                        await subscribePush();
+                      } finally {
+                        setTogglingPush(false);
+                      }
+                    }}
+                    disabled={togglingPush || pushPermission === 'denied'}
+                    className="px-3 py-1.5 bg-yellow-500 text-black rounded text-xs font-medium hover:bg-yellow-400 transition-colors disabled:opacity-50"
+                  >
+                    {togglingPush ? 'Enabling...' : 'Enable Notifications'}
+                  </button>
+                  {pushPermission === 'denied' && (
+                    <p className="text-xs text-red-400 mt-2">
+                      Notifications blocked. Please enable in browser settings.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {pushSubscribed && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                  <p className="text-xs text-green-400">
+                    Push notifications enabled. You&apos;ll receive a reminder at {prepReminderTime}.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <div className="border-t border-hole-border" />
