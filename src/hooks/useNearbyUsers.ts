@@ -14,6 +14,7 @@ interface UseNearbyUsersOptions {
 interface DbProfile {
   id: string;
   username: string;
+  display_name: string | null;
   avatar_url: string | null;
   bio: string | null;
   age: number | null;
@@ -67,7 +68,7 @@ export function useNearbyUsers(
       const { data, error: dbError } = await supabase
         .from('profiles')
         .select(`
-          id, username, avatar_url, bio, age, intent, availability,
+          id, username, display_name, avatar_url, bio, age, intent, availability,
           is_verified, is_online, last_active, location, ghost_mode,
           height_cm, weight_kg, body_type, ethnicity, position,
           host_travel, smoker, drugs, safer_sex, hiv_status,
@@ -108,6 +109,7 @@ export function useNearbyUsers(
     return {
       id: profile.id,
       username: profile.username,
+      display_name: profile.display_name || undefined,
       avatar_url: avatarUrl,
       bio: profile.bio || undefined,
       age: profile.age || undefined,
@@ -146,6 +148,7 @@ export function useNearbyUsers(
         .select(`
           id,
           username,
+          display_name,
           avatar_url,
           bio,
           age,
