@@ -3,6 +3,36 @@
 'use client';
 
 import { Encounter } from '@/hooks/useEncounters';
+import { EXPERIENCE_TAG_OPTIONS } from './ManualEncounterModal';
+
+// Activity labels for display
+const ACTIVITY_LABELS: Record<string, string> = {
+  topped: 'Topped',
+  bottomed: 'Bottomed',
+  vers: 'Vers',
+  gave_oral: 'Gave Oral',
+  received_oral: 'Received Oral',
+  mutual_oral: 'Mutual Oral',
+  rimming_gave: 'Gave Rimming',
+  rimming_received: 'Received Rimming',
+  mutual_jo: 'Mutual JO',
+  making_out: 'Making Out',
+  other: 'Other',
+};
+
+// Location labels for display
+const LOCATION_LABELS: Record<string, string> = {
+  my_place: 'My Place',
+  their_place: 'Their Place',
+  hotel: 'Hotel',
+  sauna: 'Sauna',
+  bathhouse: 'Bathhouse',
+  park: 'Park',
+  car: 'Car',
+  gym: 'Gym',
+  bar: 'Bar/Club',
+  other: 'Other',
+};
 
 interface EncounterCardProps {
   encounter: Encounter;
@@ -69,6 +99,46 @@ export default function EncounterCard({ encounter, onClick }: EncounterCardProps
             </span>
           </div>
 
+          {/* Activity, Location, Protection row */}
+          {(encounter.activities?.length || encounter.location_type || encounter.protection_used) && (
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+              {/* Activities - show first one or two */}
+              {encounter.activities && encounter.activities.length > 0 && (
+                <span className="text-hole-muted">
+                  {encounter.activities.slice(0, 2).map(a => ACTIVITY_LABELS[a] || a).join(', ')}
+                  {encounter.activities.length > 2 && ` +${encounter.activities.length - 2}`}
+                </span>
+              )}
+
+              {/* Location */}
+              {encounter.location_type && (
+                <>
+                  {encounter.activities?.length ? <span className="text-hole-muted">•</span> : null}
+                  <span className="text-hole-muted">
+                    {LOCATION_LABELS[encounter.location_type] || encounter.location_type}
+                  </span>
+                </>
+              )}
+
+              {/* Protection status */}
+              {encounter.protection_used && (
+                <>
+                  {(encounter.activities?.length || encounter.location_type) ? <span className="text-hole-muted">•</span> : null}
+                  <span className={`px-1.5 py-0.5 rounded text-xs ${
+                    encounter.protection_used === 'yes'
+                      ? 'bg-green-500/20 text-green-400'
+                      : encounter.protection_used === 'partial'
+                      ? 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {encounter.protection_used === 'yes' ? 'Protected' :
+                     encounter.protection_used === 'partial' ? 'Partial' : 'Unprotected'}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Rating */}
           {encounter.rating && (
             <div className="flex items-center gap-0.5 mt-1">
@@ -90,6 +160,23 @@ export default function EncounterCard({ encounter, onClick }: EncounterCardProps
                   />
                 </svg>
               ))}
+            </div>
+          )}
+
+          {/* Experience Tags */}
+          {encounter.experience_tags && encounter.experience_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {encounter.experience_tags.map((tagId) => {
+                const tag = EXPERIENCE_TAG_OPTIONS.find((t) => t.id === tagId);
+                return tag ? (
+                  <span
+                    key={tagId}
+                    className={`px-2 py-0.5 rounded-full text-xs ${tag.color} text-white`}
+                  >
+                    {tag.label}
+                  </span>
+                ) : null;
+              })}
             </div>
           )}
 

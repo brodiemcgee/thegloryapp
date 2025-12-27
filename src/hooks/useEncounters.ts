@@ -13,6 +13,10 @@ export interface Encounter {
   rating: number | null;
   is_anonymous: boolean;
   anonymous_name: string | null;
+  activities: string[] | null;
+  experience_tags: string[] | null;
+  location_type: string | null;
+  protection_used: 'yes' | 'no' | 'partial' | null;
   created_at: string;
   // Joined profile data for app users
   target_user?: {
@@ -26,6 +30,13 @@ export interface EncounterStats {
   thisMonth: number;
   total: number;
   avgRating: number | null;
+  protectionPercentage: number | null;
+  uniqueLocations: number;
+  regulars: number; // People encountered more than once
+  // Activity analytics
+  topActivities: { activity: string; count: number }[];
+  topExperienceTags: { tag: string; count: number }[];
+  topLocations: { location: string; count: number }[];
 }
 
 export function useEncounters() {
@@ -93,7 +104,84 @@ export function useEncounters() {
     const ratingsCount = encounters.filter((e) => e.rating !== null).length;
     const avgRating = ratingsCount > 0 ? ratingsSum / ratingsCount : null;
 
-    return { thisMonth, total, avgRating };
+    // Calculate protection percentage
+    const encountersWithProtection = encounters.filter((e) => e.protection_used !== null);
+    const protectedCount = encounters.filter((e) => e.protection_used === 'yes').length;
+    const protectionPercentage = encountersWithProtection.length > 0
+      ? Math.round((protectedCount / encountersWithProtection.length) * 100)
+      : null;
+
+    // Count unique locations
+    const locations = new Set(
+      encounters
+        .filter((e) => e.location_type !== null)
+        .map((e) => e.location_type)
+    );
+    const uniqueLocations = locations.size;
+
+    // Count regulars (same person encountered more than once)
+    const targetUserCounts = new Map<string, number>();
+    encounters.forEach((e) => {
+      if (e.target_user_id) {
+        targetUserCounts.set(
+          e.target_user_id,
+          (targetUserCounts.get(e.target_user_id) || 0) + 1
+        );
+      }
+    });
+    const regulars = Array.from(targetUserCounts.values()).filter((count) => count > 1).length;
+
+    // Activity analytics - count occurrences of each activity
+    const activityCounts = new Map<string, number>();
+    encounters.forEach((e) => {
+      if (e.activities) {
+        e.activities.forEach((activity) => {
+          activityCounts.set(activity, (activityCounts.get(activity) || 0) + 1);
+        });
+      }
+    });
+    const topActivities = Array.from(activityCounts.entries())
+      .map(([activity, count]) => ({ activity, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Experience tag analytics
+    const experienceTagCounts = new Map<string, number>();
+    encounters.forEach((e) => {
+      if (e.experience_tags) {
+        e.experience_tags.forEach((tag) => {
+          experienceTagCounts.set(tag, (experienceTagCounts.get(tag) || 0) + 1);
+        });
+      }
+    });
+    const topExperienceTags = Array.from(experienceTagCounts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Location analytics
+    const locationCounts = new Map<string, number>();
+    encounters.forEach((e) => {
+      if (e.location_type) {
+        locationCounts.set(e.location_type, (locationCounts.get(e.location_type) || 0) + 1);
+      }
+    });
+    const topLocations = Array.from(locationCounts.entries())
+      .map(([location, count]) => ({ location, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      thisMonth,
+      total,
+      avgRating,
+      protectionPercentage,
+      uniqueLocations,
+      regulars,
+      topActivities,
+      topExperienceTags,
+      topLocations,
+    };
   }, [encounters]);
 
   // Add a new encounter (for app users - from profile/chat)
@@ -101,7 +189,11 @@ export function useEncounters() {
     targetUserId: string,
     metAt: string,
     rating?: number,
-    notes?: string
+    notes?: string,
+    activities?: string[],
+    locationType?: string,
+    protectionUsed?: 'yes' | 'no' | 'partial',
+    experienceTags?: string[]
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -115,6 +207,10 @@ export function useEncounters() {
         notes: notes || null,
         is_anonymous: false,
         anonymous_name: null,
+        activities: activities || null,
+        experience_tags: experienceTags || null,
+        location_type: locationType || null,
+        protection_used: protectionUsed || null,
       })
       .select(`
         *,
@@ -139,7 +235,11 @@ export function useEncounters() {
     metAt: string,
     name?: string,
     rating?: number,
-    notes?: string
+    notes?: string,
+    activities?: string[],
+    locationType?: string,
+    protectionUsed?: 'yes' | 'no' | 'partial',
+    experienceTags?: string[]
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -153,6 +253,10 @@ export function useEncounters() {
         notes: notes || null,
         is_anonymous: true,
         anonymous_name: name || null,
+        activities: activities || null,
+        experience_tags: experienceTags || null,
+        location_type: locationType || null,
+        protection_used: protectionUsed || null,
       })
       .select()
       .single();
@@ -168,7 +272,7 @@ export function useEncounters() {
   // Update an encounter
   const updateEncounter = async (
     id: string,
-    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name'>>
+    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name' | 'activities' | 'experience_tags' | 'location_type' | 'protection_used'>>
   ) => {
     if (!user) throw new Error('Not authenticated');
 
