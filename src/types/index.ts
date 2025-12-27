@@ -29,6 +29,7 @@ export interface LookingFor {
 export interface User {
   id: string;
   username: string;
+  display_name?: string; // User-facing name shown on profile, can be duplicated (e.g., "cruising now")
   avatar_url: string | null;
   intent: Intent;
   availability: Availability;

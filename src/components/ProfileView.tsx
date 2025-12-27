@@ -34,6 +34,8 @@ export default function ProfileView() {
   const [showProfileViewers, setShowProfileViewers] = useState(false);
   const [showPaywall, setShowPaywall] = useState<string | null>(null);
   const [showDetailsEditor, setShowDetailsEditor] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
 
   const intentOptions: { value: Intent; label: string }[] = [
     { value: 'looking_now', label: 'Looking Now' },
@@ -64,6 +66,40 @@ export default function ProfileView() {
   const handleProfileDetailsUpdate = (updates: Partial<User>) => {
     setUser({ ...user, ...updates });
     // TODO: Save to Supabase
+  };
+
+  // Handle display name editing
+  const startEditingName = () => {
+    setEditNameValue(user.display_name || user.username);
+    setIsEditingName(true);
+  };
+
+  const saveDisplayName = async () => {
+    const trimmedName = editNameValue.trim();
+    if (trimmedName.length === 0 || trimmedName.length > 50) {
+      return; // Invalid length
+    }
+
+    // Update local state
+    setUser({ ...user, display_name: trimmedName });
+    setIsEditingName(false);
+
+    // Save to Supabase if authenticated
+    if (authUser) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ display_name: trimmedName })
+          .eq('id', authUser.id);
+      } catch (err) {
+        console.error('Failed to save display name:', err);
+      }
+    }
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setEditNameValue('');
   };
 
   // Load photos from database when user is authenticated
@@ -130,7 +166,54 @@ export default function ProfileView() {
     <div className="h-full flex flex-col bg-hole-bg overflow-auto">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-hole-border">
-        <h1 className="text-lg font-semibold">Profile</h1>
+        {isEditingName ? (
+          <div className="flex items-center gap-2 flex-1 mr-2">
+            <input
+              type="text"
+              value={editNameValue}
+              onChange={(e) => setEditNameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveDisplayName();
+                if (e.key === 'Escape') cancelEditingName();
+              }}
+              maxLength={50}
+              autoFocus
+              className="flex-1 text-lg font-semibold bg-hole-surface border border-hole-border rounded-lg px-3 py-1 outline-none focus:border-hole-accent"
+            />
+            <button
+              onClick={saveDisplayName}
+              className="p-1.5 bg-hole-accent text-white rounded-lg hover:bg-hole-accent-hover"
+              aria-label="Save"
+            >
+              <CheckIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={cancelEditingName}
+              className="p-1.5 bg-hole-surface text-hole-muted rounded-lg hover:bg-hole-border"
+              aria-label="Cancel"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={startEditingName}
+            className="flex items-center gap-2 group"
+          >
+            <h1 className="text-lg font-semibold">{user.display_name || user.username}</h1>
+            <svg
+              className="w-4 h-4 text-hole-muted opacity-0 group-hover:opacity-100 transition-opacity"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => setShowSettings(!showSettings)}
           className={`p-2 rounded-lg transition-colors ${
@@ -207,14 +290,14 @@ export default function ProfileView() {
       ) : (
         // Profile view
         <div className="flex-1 p-4 space-y-6">
-          {/* Profile header */}
+          {/* Username handle */}
           <div className="flex flex-col items-center">
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-xl font-semibold">{user.username}</span>
-              {user.is_verified && <CheckIcon className="w-5 h-5 text-blue-500" />}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-hole-muted">@{user.username}</span>
+              {user.is_verified && <CheckIcon className="w-4 h-4 text-blue-500" />}
             </div>
             {!user.is_verified && (
-              <button className="mt-2 text-sm text-blue-500 underline">
+              <button className="mt-1 text-sm text-blue-500 underline">
                 Get verified
               </button>
             )}
