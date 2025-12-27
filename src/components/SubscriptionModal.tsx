@@ -42,9 +42,11 @@ const PLANS: Plan[] = [
       { text: 'Basic profile', included: true },
       { text: '100 messages per day', included: true },
       { text: 'Chat with 20 nearby profiles', included: true },
+      { text: '1 private album (5 photos)', included: true },
+      { text: '12-hour album access for recipients', included: true },
       { text: 'Ghost mode', included: false },
       { text: 'See who viewed you', included: false },
-      { text: 'Read receipts', included: false },
+      { text: 'Videos in albums', included: false },
     ],
   },
   {
@@ -55,9 +57,11 @@ const PLANS: Plan[] = [
     popular: true,
     priceId: 'price_premium_monthly', // Mock Stripe price ID
     features: [
-      { text: 'Everything in Free', included: true },
       { text: 'Unlimited messages', included: true },
       { text: 'Chat with 150 nearby profiles', included: true },
+      { text: '3 private albums (5 items each)', included: true },
+      { text: 'Videos in albums (30s max)', included: true },
+      { text: '48-hour album access for recipients', included: true },
       { text: 'Ghost mode', included: true },
       { text: 'See who viewed you', included: true },
       { text: 'Read receipts', included: true },
@@ -70,11 +74,13 @@ const PLANS: Plan[] = [
     priceDetail: 'per month',
     priceId: 'price_premium_plus_monthly', // Mock Stripe price ID
     features: [
-      { text: 'Everything in Premium', included: true },
       { text: 'Chat with 500 nearby profiles', included: true },
+      { text: '5 private albums (10 items each)', included: true },
+      { text: 'Videos in albums (30s max)', included: true },
+      { text: 'Permanent album access for recipients', included: true },
       { text: 'Advanced filters', included: true },
       { text: 'Featured profile badge', included: true },
-      { text: 'Unlimited photo uploads', included: true },
+      { text: 'Everything in Premium', included: true },
       { text: '24/7 priority support', included: true },
     ],
   },

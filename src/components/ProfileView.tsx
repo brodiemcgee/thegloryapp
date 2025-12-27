@@ -5,11 +5,12 @@
 import { useState, useEffect } from 'react';
 import { currentUser } from '@/data/mockData';
 import { useSettings } from '@/hooks/useSettings';
-import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon } from './icons';
+import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon, AlbumIcon } from './icons';
 import { Intent, Availability } from '@/types';
 import BlockedUsersScreen from './BlockedUsersScreen';
 import ReferralProgramScreen from './ReferralProgramScreen';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
+import { AlbumList } from './albums';
 import ProfileDetailsEditor from './ProfileDetailsEditor';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -31,6 +32,7 @@ export default function ProfileView() {
   const [showSettings, setShowSettings] = useState(false);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [showReferralProgram, setShowReferralProgram] = useState(false);
+  const [showAlbums, setShowAlbums] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showProfileViewers, setShowProfileViewers] = useState(false);
@@ -174,6 +176,10 @@ export default function ProfileView() {
     return <ReferralProgramScreen onClose={() => setShowReferralProgram(false)} />;
   }
 
+  if (showAlbums) {
+    return <AlbumList onBack={() => setShowAlbums(false)} />;
+  }
+
   if (showProfileViewers) {
     return (
       <ProfileViewersScreen
@@ -288,6 +294,23 @@ export default function ProfileView() {
               onToggle={() => updateSettings({ hide_from_contacts: !settings.hide_from_contacts })}
             />
           </div>
+
+          {/* My Albums link */}
+          <button
+            onClick={() => setShowAlbums(true)}
+            className="w-full flex items-center justify-between p-4 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+          >
+            <div className="flex items-center gap-3">
+              <AlbumIcon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">My Albums</div>
+                <div className="text-sm text-hole-muted">Private photos &amp; videos</div>
+              </div>
+            </div>
+            <svg className="w-5 h-5 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
           {/* Blocked Users link */}
           <button

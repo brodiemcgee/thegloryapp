@@ -89,8 +89,57 @@ export interface Message {
   receiver_id: string;
   content: string;
   image_url?: string;
+  album_share?: AlbumShareMessage;
   created_at: string;
   read_at?: string;
+}
+
+// Album types
+export type AlbumItemType = 'photo' | 'video';
+
+export interface Album {
+  id: string;
+  owner_id: string;
+  name: string;
+  cover_url: string | null;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlbumItem {
+  id: string;
+  album_id: string;
+  type: AlbumItemType;
+  url: string;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  file_size_bytes: number | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface AlbumAccessGrant {
+  id: string;
+  album_id: string;
+  granted_by: string;
+  granted_to: string;
+  conversation_id: string | null;
+  granted_at: string;
+  expires_at: string | null;
+  is_locked: boolean;
+}
+
+export interface AlbumWithAccess extends Album {
+  access?: AlbumAccessGrant;
+  items?: AlbumItem[];
+}
+
+export interface AlbumShareMessage {
+  album_id: string;
+  album_name: string;
+  item_count: number;
+  preview_url: string | null;
 }
 
 export interface Conversation {

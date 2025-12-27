@@ -3,9 +3,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Conversation } from '@/types';
+import { Conversation, Album } from '@/types';
 import { ChevronLeftIcon, SendIcon, CheckIcon, DotsVerticalIcon, FlagIcon, BlockIcon, TrashIcon, ImageIcon, XIcon } from './icons';
+import { ChatAttachmentMenu, AlbumPickerModal, AlbumShareBubble } from './chat';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { useAlbumAccess } from '@/hooks/useAlbumAccess';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { useAuth } from '@/hooks/useAuth';
 import ReportModal from './ReportModal';
@@ -32,11 +34,13 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
   const [notesText, setNotesText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { blockUser, isBlocked } = useBlock();
   const { submitReport } = useReport();
   const { upload, uploading, progress, error: uploadError } = usePhotoUpload();
+  const { grantAccess } = useAlbumAccess();
 
   // User interaction hooks for favorites, notes, and encounters
   const {
@@ -178,6 +182,27 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
       // TODO: Implement clear chat functionality
       setShowMenu(false);
     }
+  };
+
+  const handleAlbumShare = async (album: Album) => {
+    setShowAlbumPicker(false);
+
+    // Grant access to the recipient
+    const grantId = await grantAccess(album.id, conversation.user.id, conversation.id);
+    if (!grantId) {
+      alert('Failed to share album');
+      return;
+    }
+
+    // Send message with album share
+    const albumShare = {
+      album_id: album.id,
+      album_name: album.name,
+      item_count: album.item_count,
+      preview_url: album.cover_url,
+    };
+
+    await sendMessage('Shared an album', undefined, albumShare);
   };
 
   // Filter out messages from blocked users
@@ -333,6 +358,24 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         ) : (
           visibleMessages.map((msg) => {
             const isMine = user && msg.sender_id === user.id;
+
+            // Render album share message
+            if (msg.album_share) {
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                >
+                  <AlbumShareBubble
+                    albumShare={msg.album_share}
+                    isMine={isMine}
+                    timestamp={msg.created_at}
+                    isRead={!!msg.read_at}
+                  />
+                </div>
+              );
+            }
+
             return (
               <div
                 key={msg.id}
@@ -430,15 +473,12 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
             className="hidden"
           />
 
-          {/* Image attachment button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
+          {/* Attachment menu */}
+          <ChatAttachmentMenu
+            onSelectPhoto={() => fileInputRef.current?.click()}
+            onSelectAlbum={() => setShowAlbumPicker(true)}
             disabled={uploading}
-            className="p-3 bg-hole-surface border border-hole-border rounded-full transition-colors hover:bg-hole-border disabled:opacity-50"
-            aria-label="Attach image"
-          >
-            <ImageIcon className="w-5 h-5" />
-          </button>
+          />
 
           {/* Text input */}
           <input
@@ -542,6 +582,13 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
           previousEncounterCount={encounters?.length || 0}
         />
       )}
+
+      {/* Album Picker Modal */}
+      <AlbumPickerModal
+        isOpen={showAlbumPicker}
+        onClose={() => setShowAlbumPicker(false)}
+        onSelect={handleAlbumShare}
+      />
     </div>
   );
 }

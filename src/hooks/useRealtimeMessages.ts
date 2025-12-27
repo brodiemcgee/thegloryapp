@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { Message } from '@/types';
+import { Message, AlbumShareMessage } from '@/types';
 import { useAuth } from './useAuth';
 
 interface UseRealtimeMessagesOptions {
@@ -93,7 +93,7 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
   }, [conversationId, user]);
 
   // Send message function
-  const sendMessage = useCallback(async (content: string, imageUrl?: string) => {
+  const sendMessage = useCallback(async (content: string, imageUrl?: string, albumShare?: AlbumShareMessage) => {
     if (!user || !content.trim()) return;
 
     const newMessage: Message = {
@@ -102,6 +102,7 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
       receiver_id: otherUserId,
       content: content.trim(),
       image_url: imageUrl,
+      album_share: albumShare,
       created_at: new Date().toISOString(),
     };
 
@@ -119,6 +120,7 @@ export function useRealtimeMessages({ conversationId, otherUserId }: UseRealtime
       //     receiver_id: otherUserId,
       //     content: content.trim(),
       //     image_url: imageUrl,
+      //     album_share: albumShare,
       //   })
       //   .select()
       //   .single();

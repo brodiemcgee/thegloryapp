@@ -63,6 +63,46 @@ export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
   premium_plus: null, // unlimited
 };
 
+// Album limits per tier
+export interface AlbumLimits {
+  maxAlbums: number;
+  maxItemsPerAlbum: number;
+  videosAllowed: boolean;
+  maxVideoSeconds: number;
+  maxVideoSizeMB: number;
+}
+
+export const ALBUM_LIMITS: Record<SubscriptionTier, AlbumLimits> = {
+  free: {
+    maxAlbums: 1,
+    maxItemsPerAlbum: 5,
+    videosAllowed: false,
+    maxVideoSeconds: 0,
+    maxVideoSizeMB: 0,
+  },
+  premium: {
+    maxAlbums: 3,
+    maxItemsPerAlbum: 5,
+    videosAllowed: true,
+    maxVideoSeconds: 30,
+    maxVideoSizeMB: 25,
+  },
+  premium_plus: {
+    maxAlbums: 5,
+    maxItemsPerAlbum: 10,
+    videosAllowed: true,
+    maxVideoSeconds: 30,
+    maxVideoSizeMB: 25,
+  },
+};
+
+// Album access duration based on RECIPIENT's tier (in milliseconds, null = never expires)
+export const ALBUM_ACCESS_DURATION: Record<SubscriptionTier, number | null> = {
+  free: 12 * 60 * 60 * 1000,      // 12 hours
+  premium: 48 * 60 * 60 * 1000,   // 48 hours
+  premium_plus: null,             // Never expires
+};
+
 const STORAGE_KEY = 'thehole_subscription';
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
