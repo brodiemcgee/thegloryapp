@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { mockUsers, currentUser } from '@/data/mockData';
+import { currentUser } from '@/data/mockData';
 import { User } from '@/types';
 import { GridIcon } from './icons';
 import UserCard from './UserCard';
@@ -32,10 +32,8 @@ export default function GridView() {
   };
 
   const filteredUsers = useMemo(() => {
-    // Combine real DB users with mock users for demo
-    const dbUserIds = new Set(dbUsers.map(u => u.id));
-    const filteredMockUsers = mockUsers.filter(u => !dbUserIds.has(u.id));
-    let result = [...dbUsers, ...filteredMockUsers];
+    // Use only real database users
+    let result = [...dbUsers];
 
     // Calculate accurate distances if we have user position
     if (position) {
