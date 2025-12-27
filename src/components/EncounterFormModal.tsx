@@ -1,73 +1,32 @@
-// Modal for adding a manual encounter (person met outside the app)
+// Shared modal for logging encounters (used by ChatView, UserProfile, and HealthView)
 
 'use client';
 
 import { useState } from 'react';
 import { XIcon } from './icons';
+import { ACTIVITY_OPTIONS, LOCATION_OPTIONS, EXPERIENCE_TAG_OPTIONS } from './ManualEncounterModal';
 
-// Activity types for encounter logging
-export const ACTIVITY_OPTIONS = [
-  { id: 'topped', label: 'Topped', category: 'anal' },
-  { id: 'bottomed', label: 'Bottomed', category: 'anal' },
-  { id: 'vers', label: 'Vers', category: 'anal' },
-  { id: 'gave_oral', label: 'Gave Oral', category: 'oral' },
-  { id: 'received_oral', label: 'Received Oral', category: 'oral' },
-  { id: 'mutual_oral', label: 'Mutual Oral', category: 'oral' },
-  { id: 'rimming_gave', label: 'Gave Rimming', category: 'oral' },
-  { id: 'rimming_received', label: 'Received Rimming', category: 'oral' },
-  { id: 'mutual_jo', label: 'Mutual JO', category: 'other' },
-  { id: 'making_out', label: 'Making Out', category: 'other' },
-  { id: 'other', label: 'Other', category: 'other' },
-];
-
-export const LOCATION_OPTIONS = [
-  { id: 'my_place', label: 'My Place' },
-  { id: 'their_place', label: 'Their Place' },
-  { id: 'hotel', label: 'Hotel' },
-  { id: 'sauna', label: 'Sauna' },
-  { id: 'bathhouse', label: 'Bathhouse' },
-  { id: 'park', label: 'Park' },
-  { id: 'car', label: 'Car' },
-  { id: 'gym', label: 'Gym' },
-  { id: 'bar', label: 'Bar/Club' },
-  { id: 'other', label: 'Other' },
-];
-
-// Experience/vibe tags for encounter analytics
-export const EXPERIENCE_TAG_OPTIONS = [
-  { id: 'hot', label: '🔥 Hot', color: 'bg-red-500' },
-  { id: 'fun', label: '🎉 Fun', color: 'bg-purple-500' },
-  { id: 'romantic', label: '💕 Romantic', color: 'bg-pink-500' },
-  { id: 'intense', label: '⚡ Intense', color: 'bg-orange-500' },
-  { id: 'chill', label: '😌 Chill', color: 'bg-blue-500' },
-  { id: 'quick', label: '⏱️ Quick', color: 'bg-gray-500' },
-  { id: 'marathon', label: '🏃 Marathon', color: 'bg-green-500' },
-  { id: 'awkward', label: '😬 Awkward', color: 'bg-yellow-600' },
-  { id: 'kinky', label: '🔗 Kinky', color: 'bg-violet-500' },
-  { id: 'vanilla', label: '🍦 Vanilla', color: 'bg-amber-200' },
-  { id: 'connection', label: '✨ Connection', color: 'bg-cyan-500' },
-  { id: 'anonymous', label: '👤 Anonymous', color: 'bg-gray-600' },
-];
-
-interface ManualEncounterModalProps {
+interface EncounterFormModalProps {
   onClose: () => void;
-  onSave: (
-    metAt: string,
-    name?: string,
-    rating?: number,
-    notes?: string,
-    activities?: string[],
-    locationType?: string,
-    protectionUsed?: 'yes' | 'no' | 'partial',
-    experienceTags?: string[]
-  ) => Promise<void>;
+  onSave: (encounter: {
+    met_at: string;
+    notes?: string;
+    rating?: number;
+    activities?: string[];
+    experience_tags?: string[];
+    location_type?: string;
+    protection_used?: 'yes' | 'no' | 'partial';
+  }) => Promise<void>;
+  username?: string; // Optional - for displaying who the encounter is with
+  previousEncounterCount?: number; // How many times you've met before
 }
 
-export default function ManualEncounterModal({
+export default function EncounterFormModal({
   onClose,
   onSave,
-}: ManualEncounterModalProps) {
-  const [name, setName] = useState('');
+  username,
+  previousEncounterCount = 0,
+}: EncounterFormModalProps) {
   const [metAt, setMetAt] = useState(new Date().toISOString().split('T')[0]);
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
@@ -98,16 +57,15 @@ export default function ManualEncounterModal({
 
     try {
       setSaving(true);
-      await onSave(
-        metAt,
-        name.trim() || undefined,
-        rating || undefined,
-        notes.trim() || undefined,
-        activities.length > 0 ? activities : undefined,
-        locationType || undefined,
-        protectionUsed || undefined,
-        experienceTags.length > 0 ? experienceTags : undefined
-      );
+      await onSave({
+        met_at: metAt,
+        notes: notes.trim() || undefined,
+        rating: rating || undefined,
+        activities: activities.length > 0 ? activities : undefined,
+        experience_tags: experienceTags.length > 0 ? experienceTags : undefined,
+        location_type: locationType || undefined,
+        protection_used: protectionUsed || undefined,
+      });
       onClose();
     } catch (err) {
       console.error('Failed to save encounter:', err);
@@ -122,7 +80,9 @@ export default function ManualEncounterModal({
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative w-full sm:max-w-md bg-hole-bg border-t sm:border border-hole-border sm:rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Log Manual Encounter</h2>
+          <h2 className="text-lg font-semibold">
+            {username ? `Log Encounter with ${username}` : 'Log Encounter'}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
@@ -131,21 +91,14 @@ export default function ManualEncounterModal({
           </button>
         </div>
 
-        <p className="text-sm text-hole-muted">
-          Log an encounter with someone you met outside the app.
-        </p>
-
-        {/* Name */}
-        <div>
-          <label className="text-sm text-hole-muted mb-2 block">Name (optional)</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter a name or leave blank for anonymous"
-            className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
-          />
-        </div>
+        {/* Previous encounters summary */}
+        {previousEncounterCount > 0 && (
+          <div className="bg-hole-surface rounded-lg p-3">
+            <p className="text-sm text-hole-muted">
+              You've logged {previousEncounterCount} encounter{previousEncounterCount !== 1 ? 's' : ''} with {username || 'this person'}
+            </p>
+          </div>
+        )}
 
         {/* Date */}
         <div>
@@ -345,9 +298,9 @@ export default function ManualEncounterModal({
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="What happened? How was it?"
+            placeholder="Any additional details..."
             className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent transition-colors resize-none"
-            rows={4}
+            rows={3}
           />
         </div>
 

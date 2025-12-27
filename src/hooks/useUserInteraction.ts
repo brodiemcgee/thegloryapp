@@ -23,6 +23,10 @@ export interface Encounter {
   met_at: string;
   notes: string | null;
   rating: number | null;
+  activities: string[] | null;
+  experience_tags: string[] | null;
+  location_type: string | null;
+  protection_used: 'yes' | 'no' | 'partial' | null;
   created_at: string;
 }
 
@@ -131,6 +135,10 @@ export function useUserInteraction(targetUserId: string) {
     met_at: string;
     notes?: string;
     rating?: number;
+    activities?: string[];
+    experience_tags?: string[];
+    location_type?: string;
+    protection_used?: 'yes' | 'no' | 'partial';
   }) => {
     if (!user) return null;
 
@@ -142,6 +150,11 @@ export function useUserInteraction(targetUserId: string) {
         met_at: encounter.met_at,
         notes: encounter.notes || null,
         rating: encounter.rating || null,
+        activities: encounter.activities || null,
+        experience_tags: encounter.experience_tags || null,
+        location_type: encounter.location_type || null,
+        protection_used: encounter.protection_used || null,
+        is_anonymous: false,
       })
       .select()
       .single();
