@@ -112,18 +112,12 @@ export default function BetaSplashPage() {
           {/* Capacity Status */}
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-hole-surface border border-hole-border rounded-lg mb-8">
             <Users className="w-5 h-5 text-purple-400" />
-            <div className="text-left">
-              <p className="text-sm text-hole-muted">Beta Testers</p>
-              <p className="text-lg font-semibold text-white">
-                {status?.current_count || 0} / {status?.max_testers || 0}
-              </p>
-            </div>
             {isFull ? (
-              <span className="px-3 py-1 bg-red-500/20 text-red-400 text-sm font-medium rounded-full">
-                Full
+              <span className="text-red-400 font-medium">
+                All spots are currently filled
               </span>
             ) : (
-              <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm font-medium rounded-full">
+              <span className="text-green-400 font-medium">
                 {status?.spots_available} spots left
               </span>
             )}
