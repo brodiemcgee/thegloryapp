@@ -443,9 +443,15 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
                   </div>
                 ))}
                 {encounters.length > 3 && (
-                  <p className="text-xs text-hole-muted text-center py-1">
-                    +{encounters.length - 3} more encounters
-                  </p>
+                  <button
+                    onClick={() => {
+                      // Navigate to contact detail view
+                      // For now, show a simple message - full implementation would open ContactDetailView
+                    }}
+                    className="w-full text-xs text-hole-accent hover:underline text-center py-2"
+                  >
+                    See all {encounters.length} encounters
+                  </button>
                 )}
               </div>
             </div>

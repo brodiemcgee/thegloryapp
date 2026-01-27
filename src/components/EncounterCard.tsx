@@ -55,11 +55,18 @@ export default function EncounterCard({ encounter, onClick }: EncounterCardProps
     });
   };
 
-  // Get display name - either target user's username or anonymous name
-  const displayName = encounter.target_user?.username || encounter.anonymous_name || 'Anonymous';
+  // Get display name - prioritize: target user > linked contact > anonymous_name > Anonymous
+  const displayName =
+    encounter.target_user?.username ||
+    encounter.contact?.name ||
+    encounter.anonymous_name ||
+    'Anonymous';
 
   // Get avatar or placeholder
   const avatarUrl = encounter.target_user?.avatar_url;
+
+  // Determine if this is a linked contact (manual with contact_id)
+  const hasLinkedContact = !!encounter.contact_id && !!encounter.contact;
 
   return (
     <button
@@ -88,8 +95,12 @@ export default function EncounterCard({ encounter, onClick }: EncounterCardProps
             <div className="flex items-center gap-2">
               <span className="font-medium truncate">{displayName}</span>
               {encounter.is_anonymous && (
-                <span className="text-xs px-2 py-0.5 bg-hole-border rounded-full text-hole-muted">
-                  Manual
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  hasLinkedContact
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : 'bg-hole-border text-hole-muted'
+                }`}>
+                  {hasLinkedContact ? 'Contact' : 'Manual'}
                 </span>
               )}
             </div>

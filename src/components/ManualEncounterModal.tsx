@@ -3,9 +3,11 @@
 'use client';
 
 import { useState } from 'react';
-import { XIcon } from './icons';
+import { XIcon, ChevronRightIcon } from './icons';
 import LocationPicker from './LocationPicker';
 import { LocationData } from '@/hooks/useSavedLocations';
+import { ContactPickerModal } from './contacts';
+import { ContactWithEncounters } from '@/hooks/useContacts';
 
 // Activity types for encounter logging
 export const ACTIVITY_OPTIONS = [
@@ -47,7 +49,8 @@ interface ManualEncounterModalProps {
     protectionUsed?: 'yes' | 'no' | 'na',
     locationLat?: number,
     locationLng?: number,
-    locationAddress?: string
+    locationAddress?: string,
+    contactId?: string
   ) => Promise<void>;
 }
 
@@ -55,6 +58,8 @@ export default function ManualEncounterModal({
   onClose,
   onSave,
 }: ManualEncounterModalProps) {
+  const [selectedContact, setSelectedContact] = useState<ContactWithEncounters | null>(null);
+  const [showContactPicker, setShowContactPicker] = useState(false);
   const [name, setName] = useState('');
   const [metAt, setMetAt] = useState(new Date().toISOString().split('T')[0]);
   const [rating, setRating] = useState<number | null>(null);
@@ -72,6 +77,17 @@ export default function ManualEncounterModal({
     );
   };
 
+  const handleContactSelect = (contact: ContactWithEncounters) => {
+    setSelectedContact(contact);
+    setName(contact.name);
+    setShowContactPicker(false);
+  };
+
+  const handleClearContact = () => {
+    setSelectedContact(null);
+    setName('');
+  };
+
   const handleSave = async () => {
     if (!metAt) return;
 
@@ -79,7 +95,7 @@ export default function ManualEncounterModal({
       setSaving(true);
       await onSave(
         metAt,
-        name.trim() || undefined,
+        selectedContact ? undefined : (name.trim() || undefined),
         rating || undefined,
         notes.trim() || undefined,
         activities.length > 0 ? activities : undefined,
@@ -87,7 +103,8 @@ export default function ManualEncounterModal({
         protectionUsed || undefined,
         location?.lat && location.lat !== 0 ? location.lat : undefined,
         location?.lng && location.lng !== 0 ? location.lng : undefined,
-        location?.address || undefined
+        location?.address || undefined,
+        selectedContact?.id
       );
       onClose();
     } catch (err) {
@@ -116,16 +133,45 @@ export default function ManualEncounterModal({
           Log an encounter with someone you met outside the app.
         </p>
 
-        {/* Name */}
+        {/* Contact Selection */}
         <div>
-          <label className="text-sm text-hole-muted mb-2 block">Name (optional)</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter a name or leave blank for anonymous"
-            className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 outline-none focus:border-hole-accent"
-          />
+          <label className="text-sm text-hole-muted mb-2 block">Who?</label>
+          {selectedContact ? (
+            <div className="flex items-center gap-3 bg-hole-surface border border-hole-border rounded-lg p-3">
+              <div className="w-10 h-10 bg-hole-border rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-lg text-hole-muted">
+                  {selectedContact.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{selectedContact.name}</p>
+                <p className="text-sm text-hole-muted">
+                  {selectedContact.encounter_count || 0} previous encounter{(selectedContact.encounter_count || 0) !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearContact}
+                className="p-1 hover:bg-hole-border rounded transition-colors"
+              >
+                <XIcon className="w-4 h-4 text-hole-muted" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowContactPicker(true)}
+              className="w-full flex items-center justify-between bg-hole-surface border border-hole-border rounded-lg p-3 hover:bg-hole-border transition-colors text-left"
+            >
+              <span className="text-hole-muted">Select or create contact...</span>
+              <ChevronRightIcon className="w-5 h-5 text-hole-muted" />
+            </button>
+          )}
+          {!selectedContact && (
+            <p className="text-xs text-hole-muted mt-1">
+              Or leave empty for anonymous encounter
+            </p>
+          )}
         </div>
 
         {/* Date */}
@@ -312,6 +358,15 @@ export default function ManualEncounterModal({
           </button>
         </div>
       </div>
+
+      {/* Contact Picker Modal */}
+      {showContactPicker && (
+        <ContactPickerModal
+          onClose={() => setShowContactPicker(false)}
+          onSelect={handleContactSelect}
+          onSkip={() => setShowContactPicker(false)}
+        />
+      )}
     </div>
   );
 }

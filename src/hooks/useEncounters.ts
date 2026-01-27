@@ -8,6 +8,7 @@ export interface Encounter {
   id: string;
   user_id: string;
   target_user_id: string | null;
+  contact_id: string | null;  // Link to manual contact
   met_at: string;
   notes: string | null;
   rating: number | null;
@@ -26,6 +27,11 @@ export interface Encounter {
     id: string;
     username: string;
     avatar_url: string | null;
+  };
+  // Joined contact data for manual contacts
+  contact?: {
+    id: string;
+    name: string;
   };
 }
 
@@ -59,7 +65,7 @@ export function useEncounters() {
     try {
       setLoading(true);
 
-      // Fetch encounters with target user profile info
+      // Fetch encounters with target user profile info and contact info
       const { data, error: fetchError } = await supabase
         .from('encounters')
         .select(`
@@ -68,6 +74,10 @@ export function useEncounters() {
             id,
             username,
             avatar_url
+          ),
+          contact:contacts!encounters_contact_id_fkey (
+            id,
+            name
           )
         `)
         .eq('user_id', user.id)
@@ -123,7 +133,9 @@ export function useEncounters() {
     const uniqueLocations = locations.size;
 
     // Count regulars (same person encountered more than once)
+    // Includes both app users (target_user_id) and manual contacts (contact_id)
     const targetUserCounts = new Map<string, number>();
+    const contactCounts = new Map<string, number>();
     encounters.forEach((e) => {
       if (e.target_user_id) {
         targetUserCounts.set(
@@ -131,8 +143,16 @@ export function useEncounters() {
           (targetUserCounts.get(e.target_user_id) || 0) + 1
         );
       }
+      if (e.contact_id) {
+        contactCounts.set(
+          e.contact_id,
+          (contactCounts.get(e.contact_id) || 0) + 1
+        );
+      }
     });
-    const regulars = Array.from(targetUserCounts.values()).filter((count) => count > 1).length;
+    const appUserRegulars = Array.from(targetUserCounts.values()).filter((count) => count > 1).length;
+    const manualRegulars = Array.from(contactCounts.values()).filter((count) => count > 1).length;
+    const regulars = appUserRegulars + manualRegulars;
 
     // Activity analytics - count occurrences of each activity
     const activityCounts = new Map<string, number>();
@@ -242,7 +262,8 @@ export function useEncounters() {
     protectionUsed?: 'yes' | 'no' | 'na',
     locationLat?: number,
     locationLng?: number,
-    locationAddress?: string
+    locationAddress?: string,
+    contactId?: string  // Optional link to a contact
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -251,6 +272,7 @@ export function useEncounters() {
       .insert({
         user_id: user.id,
         target_user_id: null,
+        contact_id: contactId || null,
         met_at: metAt,
         rating: rating || null,
         notes: notes || null,
@@ -263,7 +285,13 @@ export function useEncounters() {
         location_address: locationAddress || null,
         protection_used: protectionUsed || null,
       })
-      .select()
+      .select(`
+        *,
+        contact:contacts!encounters_contact_id_fkey (
+          id,
+          name
+        )
+      `)
       .single();
 
     if (insertError) throw insertError;
@@ -277,7 +305,7 @@ export function useEncounters() {
   // Update an encounter
   const updateEncounter = async (
     id: string,
-    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name' | 'activities' | 'experience_tags' | 'location_type' | 'location_lat' | 'location_lng' | 'location_address' | 'protection_used'>>
+    updates: Partial<Pick<Encounter, 'met_at' | 'rating' | 'notes' | 'anonymous_name' | 'activities' | 'experience_tags' | 'location_type' | 'location_lat' | 'location_lng' | 'location_address' | 'protection_used' | 'contact_id'>>
   ) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -292,6 +320,10 @@ export function useEncounters() {
           id,
           username,
           avatar_url
+        ),
+        contact:contacts!encounters_contact_id_fkey (
+          id,
+          name
         )
       `)
       .single();

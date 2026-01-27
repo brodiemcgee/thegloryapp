@@ -158,3 +158,37 @@ export interface AppSettings {
   hide_from_contacts: boolean;
   location_accuracy: number; // 0-200 meters, how much to fuzz location for privacy
 }
+
+// Contact types for managing people you've had encounters with
+export type ContactHivStatus = 'negative' | 'positive' | 'undetectable' | 'on_prep' | 'unknown';
+
+export interface Contact {
+  id: string;
+  user_id: string;
+  name: string;
+  notes: string | null;
+  phone_hint: string | null;
+  social_handle: string | null;
+  appearance_notes: string | null;
+  preferred_activities: string[] | null;
+  hiv_status: ContactHivStatus | null;
+  last_tested_date: string | null;
+  health_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Computed client-side
+  encounter_count?: number;
+  last_met?: string;
+}
+
+export interface UnifiedContact {
+  type: 'app_user' | 'manual';
+  id: string;               // profile_id or contact_id
+  name: string;
+  avatar_url: string | null;
+  encounter_count: number;
+  last_met: string | null;
+  first_met: string | null;
+  profile?: User;           // For app users only
+  contact?: Contact;        // For manual contacts only
+}

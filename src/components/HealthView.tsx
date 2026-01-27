@@ -7,7 +7,7 @@ import { useHealthScreens, StiResults } from '@/hooks/useHealthScreens';
 import { useEncounters, Encounter } from '@/hooks/useEncounters';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { useContactTracingContext } from '@/contexts/ContactTracingContext';
-import { PlusIcon, SettingsIcon } from './icons';
+import { PlusIcon, SettingsIcon, ContactsIcon } from './icons';
 import HealthScreenModal from './HealthScreenModal';
 import ManualEncounterModal from './ManualEncounterModal';
 import EncounterCard from './EncounterCard';
@@ -15,6 +15,7 @@ import EncounterDetailModal from './EncounterDetailModal';
 import MedicationTracker from './MedicationTracker';
 import HealthSettingsModal from './HealthSettingsModal';
 import { ContactTraceAlerts } from './ContactTraceAlert';
+import { ContactsView } from './contacts';
 
 export default function HealthView() {
   const { latestScreen, daysSinceLastTest, addScreen, loading: healthLoading } = useHealthScreens();
@@ -24,6 +25,7 @@ export default function HealthView() {
   const [showHealthModal, setShowHealthModal] = useState(false);
   const [showEncounterModal, setShowEncounterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showContactsView, setShowContactsView] = useState(false);
   const [selectedEncounter, setSelectedEncounter] = useState<Encounter | null>(null);
 
   // Calculate partners since last screen
@@ -87,9 +89,10 @@ export default function HealthView() {
     protectionUsed?: 'yes' | 'no' | 'na',
     locationLat?: number,
     locationLng?: number,
-    locationAddress?: string
+    locationAddress?: string,
+    contactId?: string
   ) => {
-    await addManualEncounter(metAt, name, rating, notes, activities, locationType, protectionUsed, locationLat, locationLng, locationAddress);
+    await addManualEncounter(metAt, name, rating, notes, activities, locationType, protectionUsed, locationLat, locationLng, locationAddress, contactId);
   };
 
   return (
@@ -97,12 +100,21 @@ export default function HealthView() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-hole-border">
         <h1 className="text-lg font-semibold">Health & Encounters</h1>
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
-        >
-          <SettingsIcon className="w-5 h-5 text-hole-muted" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowContactsView(true)}
+            className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
+            title="Contacts"
+          >
+            <ContactsIcon className="w-5 h-5 text-hole-muted" />
+          </button>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 hover:bg-hole-surface rounded-lg transition-colors"
+          >
+            <SettingsIcon className="w-5 h-5 text-hole-muted" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -331,6 +343,11 @@ export default function HealthView() {
             setSelectedEncounter(null);
           }}
         />
+      )}
+      {showContactsView && (
+        <div className="fixed inset-0 z-50 bg-hole-bg">
+          <ContactsView onClose={() => setShowContactsView(false)} />
+        </div>
       )}
     </div>
   );
