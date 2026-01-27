@@ -30,6 +30,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [capturedReferralCode, setCapturedReferralCode] = useState<string | null>(null);
+  const [capturedBetaCode, setCapturedBetaCode] = useState<string | null>(null);
 
   // Check consent on mount
   useEffect(() => {
@@ -38,23 +39,41 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setCheckingConsent(false);
   }, []);
 
-  // Capture referral code from URL on mount
+  // Capture referral code and beta code from URL on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+
+      // Handle referral code
       const refCode = params.get('ref');
       if (refCode) {
         setCapturedReferralCode(refCode.toUpperCase());
         // Store in sessionStorage for persistence across auth flow
         sessionStorage.setItem('referral_code', refCode.toUpperCase());
-        // Clean up URL without reload
-        const url = new URL(window.location.href);
-        url.searchParams.delete('ref');
-        window.history.replaceState({}, '', url.toString());
       } else {
         // Check sessionStorage for previously captured code
         const stored = sessionStorage.getItem('referral_code');
         if (stored) setCapturedReferralCode(stored);
+      }
+
+      // Handle beta invite code
+      const betaCode = params.get('beta');
+      if (betaCode) {
+        setCapturedBetaCode(betaCode.toUpperCase());
+        // Store in sessionStorage for persistence across auth flow
+        sessionStorage.setItem('beta_code', betaCode.toUpperCase());
+      } else {
+        // Check sessionStorage for previously captured code
+        const storedBeta = sessionStorage.getItem('beta_code');
+        if (storedBeta) setCapturedBetaCode(storedBeta);
+      }
+
+      // Clean up URL without reload
+      if (refCode || betaCode) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('ref');
+        url.searchParams.delete('beta');
+        window.history.replaceState({}, '', url.toString());
       }
     }
   }, []);
@@ -158,6 +177,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       <OnboardingScreen
         onComplete={handleOnboardingComplete}
         referralCode={capturedReferralCode}
+        betaCode={capturedBetaCode}
       />
     );
   }

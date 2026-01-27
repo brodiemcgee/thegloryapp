@@ -9,9 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 interface OnboardingScreenProps {
   onComplete: () => void;
   referralCode?: string | null;
+  betaCode?: string | null;
 }
 
-export default function OnboardingScreen({ onComplete, referralCode }: OnboardingScreenProps) {
+export default function OnboardingScreen({ onComplete, referralCode, betaCode }: OnboardingScreenProps) {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,6 +94,34 @@ export default function OnboardingScreen({ onComplete, referralCode }: Onboardin
           // Clear stored referral code
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem('referral_code');
+          }
+        }
+
+        // Process beta invitation code if provided
+        if (betaCode) {
+          try {
+            // Accept the beta invitation using the database function
+            const { data: testerId, error: betaError } = await supabase
+              .rpc('accept_beta_invitation', {
+                p_code: betaCode.toUpperCase(),
+                p_user_id: user.id,
+              });
+
+            if (betaError) {
+              console.log('Beta invitation acceptance failed:', betaError.message);
+            } else if (testerId) {
+              console.log('Successfully joined beta program, tester ID:', testerId);
+            } else {
+              console.log('Beta code invalid or already used');
+            }
+          } catch {
+            // Beta enrollment failed silently - don't block onboarding
+            console.log('Beta enrollment failed (code may be invalid or already used)');
+          }
+
+          // Clear stored beta code
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('beta_code');
           }
         }
 

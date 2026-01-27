@@ -11,6 +11,7 @@ import MessagesView from '@/components/MessagesView';
 import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
 import InAppNotification from '@/components/InAppNotification';
+import { BetaStatusBanner } from '@/components/beta';
 import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 import { ConversationsProvider } from '@/contexts/ConversationsContext';
@@ -59,6 +60,9 @@ function AppContent() {
     <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
       {/* In-app notifications */}
       <InAppNotification onNavigate={handleNotificationNavigate} />
+
+      {/* Beta tester status banner */}
+      <BetaStatusBanner />
 
       {/* Main content area */}
       <div className="flex-1 overflow-hidden">

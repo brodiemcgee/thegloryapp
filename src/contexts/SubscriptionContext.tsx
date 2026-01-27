@@ -115,6 +115,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     isActive: false,
   });
   const [creditBalance, setCreditBalance] = useState(0);
+  const [hasBetaLifetimePremium, setHasBetaLifetimePremium] = useState(false);
 
   // Fetch credit balance from Supabase
   const refreshCreditBalance = useCallback(async () => {
@@ -133,13 +134,43 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // Fetch credit balance when user changes
+  // Check for beta lifetime premium
+  const checkBetaLifetimePremium = useCallback(async () => {
+    if (!user) {
+      setHasBetaLifetimePremium(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('has_beta_lifetime_premium', { p_user_id: user.id });
+      if (!error && data !== null) {
+        setHasBetaLifetimePremium(data);
+
+        // If user has beta lifetime premium, set their subscription state
+        if (data) {
+          setSubscription({
+            tier: 'premium',
+            expiresAt: null, // Lifetime, no expiry
+            isActive: true,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error checking beta lifetime premium:', err);
+    }
+  }, [user]);
+
+  // Fetch credit balance and check beta premium when user changes
   useEffect(() => {
     refreshCreditBalance();
-  }, [refreshCreditBalance]);
+    checkBetaLifetimePremium();
+  }, [refreshCreditBalance, checkBetaLifetimePremium]);
 
-  // Load subscription from localStorage
+  // Load subscription from localStorage (only if not beta lifetime premium)
   useEffect(() => {
+    // Skip localStorage loading if user has beta lifetime premium
+    if (hasBetaLifetimePremium) return;
+
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -158,7 +189,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, []);
+  }, [hasBetaLifetimePremium]);
 
   const isPremium = subscription.tier !== 'free' && subscription.isActive;
 

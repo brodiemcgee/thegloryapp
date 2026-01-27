@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Lock,
   LogOut,
+  FlaskConical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/admin/useAdminAuth';
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { label: 'Appeals', href: '/admin/appeals', icon: Scale, badge: 0 },
   { label: 'Messages', href: '/admin/messages', icon: MessageSquare, badge: 0 },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { label: 'Beta Testers', href: '/admin/beta-testers', icon: FlaskConical },
   { label: 'Team', href: '/admin/team', icon: UserCog, superAdminOnly: true },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
   { label: 'Audit Logs', href: '/admin/audit', icon: FileText },
