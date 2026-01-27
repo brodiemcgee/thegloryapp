@@ -3,8 +3,8 @@
 import { LegalPageLayout } from '@/components/legal';
 
 export const metadata = {
-  title: 'Data Protection | thehole.app',
-  description: 'Data Protection practices for thehole.app',
+  title: 'Data Protection | theglory.app',
+  description: 'Data Protection practices for theglory.app',
 };
 
 export default function DataProtectionPage() {
@@ -13,8 +13,8 @@ export default function DataProtectionPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">1. Overview</h2>
         <p className="text-gray-300 mb-3">
-          At thehole.app, we take the security and privacy of your data seriously. This document
-          outlines the technical and organizational measures we employ to protect your personal
+          At theglory.app, we take the security and privacy of your data seriously. This document
+          outlines the technical and organisational measures we employ to protect your personal
           information.
         </p>
         <p className="text-gray-300">
@@ -54,16 +54,16 @@ export default function DataProtectionPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">4. Data Minimization</h2>
+        <h2 className="text-xl font-semibold mb-4">4. Data Minimisation</h2>
         <p className="text-gray-300 mb-3">
-          We practice data minimization, collecting only the information necessary to provide our
+          We practise data minimisation, collecting only the information necessary to provide our
           services:
         </p>
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
           <li>Optional fields are clearly marked and not required</li>
           <li>Location data is only collected with explicit permission</li>
           <li>We do not collect data from your device beyond what you explicitly provide</li>
-          <li>Analytics data is aggregated and anonymized where possible</li>
+          <li>Analytics data is aggregated and anonymised where possible</li>
         </ul>
       </section>
 
@@ -73,9 +73,9 @@ export default function DataProtectionPage() {
         <h3 className="text-lg font-medium mb-3 mt-4">Photo Protection</h3>
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
           <li>Photos are stored in secure, access-controlled storage buckets</li>
-          <li>Private album photos require explicit access grants</li>
-          <li>EXIF metadata is stripped from uploaded photos</li>
-          <li>Photos are served via signed URLs with expiration</li>
+          <li>Private album photos require explicit access grants and use signed URLs with expiration</li>
+          <li>Profile photos are publicly accessible to other app users</li>
+          <li>We recommend removing sensitive metadata from photos before uploading</li>
         </ul>
 
         <h3 className="text-lg font-medium mb-3 mt-4">Message Security</h3>
@@ -94,17 +94,17 @@ export default function DataProtectionPage() {
         </p>
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
           <li>Location sharing is opt-in and can be disabled at any time</li>
-          <li>Precise location is never shared directly with other users</li>
+          <li>Only your current location is stored; we do not maintain location history</li>
           <li>Distance calculations are performed server-side</li>
-          <li>Location history is automatically purged after 24 hours</li>
+          <li>Your location is updated only while the app is active</li>
           <li>Ghost mode allows browsing without revealing your location</li>
         </ul>
       </section>
 
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">7. Anonymization & Pseudonymization</h2>
+        <h2 className="text-xl font-semibold mb-4">7. Anonymisation & Pseudonymisation</h2>
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
-          <li>Analytics data is anonymized before processing</li>
+          <li>Analytics data is anonymised before processing</li>
           <li>User IDs are pseudonymous (UUIDs, not real names)</li>
           <li>Reported content is reviewed with user identifiers hidden when possible</li>
           <li>Aggregated statistics do not contain personally identifiable information</li>
@@ -158,7 +158,7 @@ export default function DataProtectionPage() {
           <li>Do not share your login credentials with anyone</li>
           <li>Be cautious about the personal information you share in your profile</li>
           <li>Review your privacy settings regularly</li>
-          <li>Report suspicious accounts or behavior immediately</li>
+          <li>Report suspicious accounts or behaviour immediately</li>
           <li>Log out from shared devices</li>
         </ul>
       </section>
@@ -177,14 +177,14 @@ export default function DataProtectionPage() {
         <h2 className="text-xl font-semibold mb-4">12. Security Contact</h2>
         <p className="text-gray-300 mb-3">
           If you discover a security vulnerability, please report it responsibly to{' '}
-          <a href="mailto:security@thehole.app" className="text-hole-accent hover:underline">
-            security@thehole.app
+          <a href="mailto:security@theglory.app" className="text-hole-accent hover:underline">
+            security@theglory.app
           </a>
         </p>
         <p className="text-gray-300">
           For general privacy and data protection inquiries, contact{' '}
-          <a href="mailto:privacy@thehole.app" className="text-hole-accent hover:underline">
-            privacy@thehole.app
+          <a href="mailto:privacy@theglory.app" className="text-hole-accent hover:underline">
+            privacy@theglory.app
           </a>
         </p>
       </section>

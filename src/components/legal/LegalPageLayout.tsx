@@ -58,7 +58,7 @@ export default function LegalPageLayout({ title, lastUpdated, children }: LegalP
       {/* Footer */}
       <footer className="border-t border-hole-border mt-12">
         <div className="max-w-3xl mx-auto px-4 py-6 text-center text-sm text-hole-muted">
-          <p>thehole.app</p>
+          <p>theglory.app</p>
         </div>
       </footer>
     </div>

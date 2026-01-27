@@ -3,8 +3,8 @@
 import { LegalPageLayout } from '@/components/legal';
 
 export const metadata = {
-  title: 'Privacy Policy | thehole.app',
-  description: 'Privacy Policy for thehole.app',
+  title: 'Privacy Policy | theglory.app',
+  description: 'Privacy Policy for theglory.app',
 };
 
 export default function PrivacyPage() {
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">1. Introduction</h2>
         <p className="text-gray-300 mb-3">
-          thehole.app ("we", "us", or "our") is committed to protecting your privacy. This Privacy
+          theglory.app (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) is committed to protecting your privacy. This Privacy
           Policy explains how we collect, use, share, and protect your personal information when you
           use our App.
         </p>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
           <li>Precise location (with your permission) for nearby user discovery</li>
           <li>Approximate location for regional features</li>
-          <li>Location history for showing your presence on the map</li>
+          <li>Current location only; we do not store location history</li>
         </ul>
 
         <h3 className="text-lg font-medium mb-3 mt-4">Photos & Media</h3>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
         <h2 className="text-xl font-semibold mb-4">3. How We Use Your Information</h2>
         <p className="text-gray-300 mb-3">We use your information to:</p>
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
-          <li>Provide and operate the App's features</li>
+          <li>Provide and operate the App&apos;s features</li>
           <li>Show your profile to other users</li>
           <li>Display nearby users on the map</li>
           <li>Facilitate messaging between users</li>
@@ -116,7 +116,7 @@ export default function PrivacyPage() {
           <li><strong className="text-white">Active account data:</strong> Retained while your account is active</li>
           <li><strong className="text-white">Deleted accounts:</strong> Data deleted within 30 days of account deletion</li>
           <li><strong className="text-white">Messages:</strong> Retained for 90 days after deletion request</li>
-          <li><strong className="text-white">Location history:</strong> Automatically purged after 24 hours</li>
+          <li><strong className="text-white">Location data:</strong> Current location only; updated when you use the app</li>
           <li><strong className="text-white">Blocked user records:</strong> Retained for safety purposes</li>
           <li><strong className="text-white">Legal holds:</strong> Data may be retained longer if required by law</li>
         </ul>
@@ -135,8 +135,8 @@ export default function PrivacyPage() {
         </ul>
         <p className="text-gray-300 mt-3">
           To exercise these rights, contact us at{' '}
-          <a href="mailto:privacy@thehole.app" className="text-hole-accent hover:underline">
-            privacy@thehole.app
+          <a href="mailto:privacy@theglory.app" className="text-hole-accent hover:underline">
+            privacy@theglory.app
           </a>
         </p>
       </section>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-2 text-gray-300">
           <li>Keep you logged in</li>
           <li>Remember your preferences (e.g., SFW mode)</li>
-          <li>Analyze app usage and performance</li>
+          <li>Analyse app usage and performance</li>
           <li>Prevent fraud and abuse</li>
         </ul>
         <p className="text-gray-300 mt-3">
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">10. Children's Privacy</h2>
+        <h2 className="text-xl font-semibold mb-4">10. Children&apos;s Privacy</h2>
         <p className="text-gray-300">
           The App is strictly for adults 18 years and older. We do not knowingly collect data from
           anyone under 18. If we discover that a user is underage, we will immediately terminate
@@ -207,8 +207,8 @@ export default function PrivacyPage() {
         <h2 className="text-xl font-semibold mb-4">12. Contact Us</h2>
         <p className="text-gray-300">
           For privacy-related questions or requests, contact us at{' '}
-          <a href="mailto:privacy@thehole.app" className="text-hole-accent hover:underline">
-            privacy@thehole.app
+          <a href="mailto:privacy@theglory.app" className="text-hole-accent hover:underline">
+            privacy@theglory.app
           </a>
         </p>
       </section>
