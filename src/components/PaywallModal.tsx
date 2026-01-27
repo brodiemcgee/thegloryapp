@@ -52,6 +52,16 @@ const FEATURE_BENEFITS: Record<string, { title: string; description: string; ben
       'Reduce uncertainty',
     ],
   },
+  visibility_controls: {
+    title: 'Privacy Controls',
+    description: 'Control where you appear',
+    benefits: [
+      'Hide from grid view',
+      'Hide from map view',
+      'Browse completely privately',
+      'Toggle visibility anytime',
+    ],
+  },
   default: {
     title: 'Premium Feature',
     description: 'Unlock premium features',

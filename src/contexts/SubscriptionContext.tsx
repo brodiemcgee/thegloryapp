@@ -14,7 +14,8 @@ export type SubscriptionFeature =
   | 'unlimited_messages'
   | 'extended_reach'
   | 'read_receipts'
-  | 'advanced_filters';
+  | 'advanced_filters'
+  | 'visibility_controls';
 
 interface SubscriptionState {
   tier: SubscriptionTier;
@@ -38,7 +39,7 @@ const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(
 
 const FEATURE_ACCESS: Record<SubscriptionTier, SubscriptionFeature[]> = {
   free: [],
-  premium: ['ghost_mode', 'who_viewed_me', 'unlimited_messages', 'read_receipts', 'extended_reach'],
+  premium: ['ghost_mode', 'who_viewed_me', 'unlimited_messages', 'read_receipts', 'extended_reach', 'visibility_controls'],
   premium_plus: [
     'ghost_mode',
     'who_viewed_me',
@@ -46,6 +47,7 @@ const FEATURE_ACCESS: Record<SubscriptionTier, SubscriptionFeature[]> = {
     'extended_reach',
     'read_receipts',
     'advanced_filters',
+    'visibility_controls',
   ],
 };
 

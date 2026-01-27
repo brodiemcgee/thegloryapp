@@ -69,6 +69,10 @@ export interface User {
 
   // Kinks
   kinks?: string[];
+
+  // Visibility settings
+  show_in_grid?: boolean;
+  show_on_map?: boolean;
 }
 
 export interface Location {
@@ -157,6 +161,8 @@ export interface AppSettings {
   ghost_mode: boolean;
   hide_from_contacts: boolean;
   location_accuracy: number; // 0-200 meters, how much to fuzz location for privacy
+  show_in_grid: boolean;
+  show_on_map: boolean;
 }
 
 // Contact types for managing people you've had encounters with

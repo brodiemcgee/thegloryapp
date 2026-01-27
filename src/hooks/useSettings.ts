@@ -12,6 +12,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   ghost_mode: false,
   hide_from_contacts: false,
   location_accuracy: 100, // Default 100m fuzz for privacy
+  show_in_grid: true,
+  show_on_map: true,
 };
 
 const STORAGE_KEY = 'thehole_settings';

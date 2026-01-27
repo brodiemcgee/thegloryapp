@@ -145,6 +145,9 @@ export default function MapView() {
     // Use only real database users with locations
     let result = (dbUsers || []).filter(u => u.location);
 
+    // Filter by map visibility
+    result = result.filter(user => user.show_on_map !== false);
+
     // Filter by online status
     if (filters.online === 'online') {
       result = result.filter((u) => u.last_active && isActiveWithin(u.last_active, 2));

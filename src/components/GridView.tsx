@@ -35,6 +35,9 @@ export default function GridView() {
     // Use only real database users
     let result = [...dbUsers];
 
+    // Filter by grid visibility
+    result = result.filter(user => user.show_in_grid !== false);
+
     // Calculate accurate distances if we have user position
     if (position) {
       result = result.map((user) => {

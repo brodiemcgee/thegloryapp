@@ -5,7 +5,8 @@
 import { useState, useEffect } from 'react';
 import { currentUser } from '@/data/mockData';
 import { useSettings } from '@/hooks/useSettings';
-import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon, AlbumIcon } from './icons';
+import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon, AlbumIcon, TrashIcon } from './icons';
+import DeleteAccountModal from './DeleteAccountModal';
 import { Intent, Availability } from '@/types';
 import BlockedUsersScreen from './BlockedUsersScreen';
 import ReferralProgramScreen from './ReferralProgramScreen';
@@ -16,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useProfileViews } from '@/hooks/useProfileViews';
 import { useGhostMode } from '@/hooks/useGhostMode';
+import { useVisibilityControls } from '@/hooks/useVisibilityControls';
 import SubscriptionModal from './SubscriptionModal';
 import ProfileViewersScreen from './ProfileViewersScreen';
 import PaywallModal from './PaywallModal';
@@ -28,6 +30,7 @@ export default function ProfileView() {
   const { subscription, isPremium } = useSubscription();
   const { viewCount } = useProfileViews();
   const { isGhostModeEnabled, canUseGhostMode, toggleGhostMode } = useGhostMode();
+  const { showInGrid, showOnMap, canUseVisibilityControls, isFullyHidden, toggleShowInGrid, toggleShowOnMap } = useVisibilityControls();
   const [user, setUser] = useState(currentUser);
   const [showSettings, setShowSettings] = useState(false);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
@@ -38,6 +41,7 @@ export default function ProfileView() {
   const [showProfileViewers, setShowProfileViewers] = useState(false);
   const [showPaywall, setShowPaywall] = useState<string | null>(null);
   const [showDetailsEditor, setShowDetailsEditor] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
 
@@ -64,6 +68,20 @@ export default function ProfileView() {
     const result = toggleGhostMode();
     if (result.requiresPremium) {
       setShowPaywall('ghost_mode');
+    }
+  };
+
+  const handleToggleShowInGrid = () => {
+    const result = toggleShowInGrid();
+    if (result.requiresPremium) {
+      setShowPaywall('visibility_controls');
+    }
+  };
+
+  const handleToggleShowOnMap = () => {
+    const result = toggleShowOnMap();
+    if (result.requiresPremium) {
+      setShowPaywall('visibility_controls');
     }
   };
 
@@ -293,6 +311,41 @@ export default function ProfileView() {
               enabled={settings.hide_from_contacts}
               onToggle={() => updateSettings({ hide_from_contacts: !settings.hide_from_contacts })}
             />
+
+            {/* Visibility Controls Section */}
+            <div className="pt-4 border-t border-hole-border">
+              <h3 className="text-sm font-medium text-hole-muted mb-3">Visibility Controls</h3>
+
+              {/* Warning banner when fully hidden */}
+              {isFullyHidden && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-3 mb-4">
+                  <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <p className="font-medium text-yellow-400">You&apos;re invisible</p>
+                    <p className="text-sm text-hole-muted">
+                      You won&apos;t appear in the grid or on the map. Others can&apos;t discover you.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <ToggleSetting
+                label="Appear in Grid"
+                description="Show your profile in the grid view"
+                enabled={showInGrid}
+                onToggle={handleToggleShowInGrid}
+                isPremium={!canUseVisibilityControls}
+              />
+              <ToggleSetting
+                label="Appear on Map"
+                description="Show your location on the map"
+                enabled={showOnMap}
+                onToggle={handleToggleShowOnMap}
+                isPremium={!canUseVisibilityControls}
+              />
+            </div>
           </div>
 
           {/* My Albums link */}
@@ -349,6 +402,15 @@ export default function ProfileView() {
             className="w-full py-3 bg-hole-surface border border-hole-border text-hole-accent rounded-lg font-medium transition-colors hover:bg-hole-border"
           >
             Sign Out
+          </button>
+
+          {/* Delete Account */}
+          <button
+            onClick={() => setShowDeleteAccount(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-hole-surface border border-red-500/30 text-red-500 rounded-lg font-medium transition-colors hover:bg-red-500/10"
+          >
+            <TrashIcon className="w-4 h-4" />
+            Delete Account
           </button>
         </div>
       ) : (
@@ -575,6 +637,10 @@ export default function ProfileView() {
           }}
         />
       )}
+      <DeleteAccountModal
+        isOpen={showDeleteAccount}
+        onClose={() => setShowDeleteAccount(false)}
+      />
     </div>
   );
 }

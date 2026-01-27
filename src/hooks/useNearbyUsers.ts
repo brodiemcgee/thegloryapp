@@ -40,6 +40,8 @@ interface DbProfile {
   looking_for: Record<string, unknown> | null;
   kinks: string[] | null;
   account_status: string | null;
+  show_in_grid: boolean;
+  show_on_map: boolean;
 }
 
 interface DbPhoto {
@@ -143,6 +145,8 @@ export function useNearbyUsers(
       twitter_handle: profile.twitter_handle || undefined,
       looking_for: profile.looking_for as User['looking_for'],
       kinks: profile.kinks || undefined,
+      show_in_grid: profile.show_in_grid,
+      show_on_map: profile.show_on_map,
     };
   };
 

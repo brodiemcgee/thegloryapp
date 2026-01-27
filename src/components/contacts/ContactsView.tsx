@@ -1,57 +1,46 @@
-// Main contacts view - lists all contacts with filtering tabs
+// Main contacts view - lists all contacts
 
 'use client';
 
 import { useState, useMemo } from 'react';
 import { XIcon, PlusIcon, SearchIcon } from '../icons';
 import { useUnifiedContacts, useContacts, CreateContactData } from '@/hooks/useContacts';
-import { UnifiedContact } from '@/types';
+import { UnifiedContact, User } from '@/types';
 import ContactCard from './ContactCard';
 import ContactDetailView from './ContactDetailView';
 import ContactFormModal from './ContactFormModal';
-
-type TabType = 'all' | 'app' | 'manual';
+import UserProfile from '../UserProfile';
 
 interface ContactsViewProps {
   onClose: () => void;
 }
 
 export default function ContactsView({ onClose }: ContactsViewProps) {
-  const { contacts, appUserContacts, manualContacts, loading, refresh } = useUnifiedContacts();
+  const { contacts, loading, refresh } = useUnifiedContacts();
   const { createContact } = useContacts();
 
-  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<UnifiedContact | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<User | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Filter contacts based on active tab and search
+  // Filter contacts based on search
   const filteredContacts = useMemo(() => {
-    let list: UnifiedContact[];
-
-    switch (activeTab) {
-      case 'app':
-        list = appUserContacts;
-        break;
-      case 'manual':
-        list = contacts.filter((c) => c.type === 'manual');
-        break;
-      default:
-        list = contacts;
-    }
-
-    if (!searchQuery.trim()) return list;
+    if (!searchQuery.trim()) return contacts;
 
     const query = searchQuery.toLowerCase();
-    return list.filter((c) => c.name.toLowerCase().includes(query));
-  }, [contacts, appUserContacts, activeTab, searchQuery]);
+    return contacts.filter((c) => c.name.toLowerCase().includes(query));
+  }, [contacts, searchQuery]);
 
-  // Tab counts
-  const tabCounts = {
-    all: contacts.length,
-    app: appUserContacts.length,
-    manual: manualContacts.length,
-  };
+  // Show user profile if selected
+  if (selectedProfile) {
+    return (
+      <UserProfile
+        user={selectedProfile}
+        onBack={() => setSelectedProfile(null)}
+      />
+    );
+  }
 
   if (selectedContact) {
     return (
@@ -102,40 +91,6 @@ export default function ContactsView({ onClose }: ContactsViewProps) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-hole-border">
-        <button
-          onClick={() => setActiveTab('all')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'all'
-              ? 'text-hole-accent border-b-2 border-hole-accent'
-              : 'text-hole-muted hover:text-white'
-          }`}
-        >
-          All ({tabCounts.all})
-        </button>
-        <button
-          onClick={() => setActiveTab('app')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'app'
-              ? 'text-hole-accent border-b-2 border-hole-accent'
-              : 'text-hole-muted hover:text-white'
-          }`}
-        >
-          App Users ({tabCounts.app})
-        </button>
-        <button
-          onClick={() => setActiveTab('manual')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'manual'
-              ? 'text-hole-accent border-b-2 border-hole-accent'
-              : 'text-hole-muted hover:text-white'
-          }`}
-        >
-          Manual ({tabCounts.manual})
-        </button>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
@@ -149,7 +104,7 @@ export default function ContactsView({ onClose }: ContactsViewProps) {
                 <p className="text-hole-muted mb-2">No contacts found</p>
                 <p className="text-sm text-hole-muted">Try a different search term</p>
               </>
-            ) : activeTab === 'all' ? (
+            ) : (
               <>
                 <p className="text-hole-muted mb-2">No contacts yet</p>
                 <p className="text-sm text-hole-muted mb-4">
@@ -162,26 +117,6 @@ export default function ContactsView({ onClose }: ContactsViewProps) {
                   Add Manual Contact
                 </button>
               </>
-            ) : activeTab === 'app' ? (
-              <>
-                <p className="text-hole-muted mb-2">No app user contacts</p>
-                <p className="text-sm text-hole-muted">
-                  Log encounters with app users to see them here.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-hole-muted mb-2">No manual contacts</p>
-                <p className="text-sm text-hole-muted mb-4">
-                  Add contacts for people you meet outside the app.
-                </p>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="px-4 py-2 bg-hole-accent text-white rounded-lg text-sm font-medium hover:bg-hole-accent-hover transition-colors"
-                >
-                  Add Contact
-                </button>
-              </>
             )}
           </div>
         ) : (
@@ -191,6 +126,7 @@ export default function ContactsView({ onClose }: ContactsViewProps) {
                 key={`${contact.type}-${contact.id}`}
                 contact={contact}
                 onClick={() => setSelectedContact(contact)}
+                onViewProfile={contact.profile ? () => setSelectedProfile(contact.profile!) : undefined}
               />
             ))}
           </div>
