@@ -32,6 +32,25 @@ interface DbLocation {
   is_verified: boolean;
   is_active: boolean;
   created_at: string;
+  // Premium fields
+  directions: string | null;
+  best_times: string | null;
+  parking_info: string | null;
+  safety_tips: string | null;
+  amenities: string[] | null;
+  photos: string[] | null;
+  cover_photo: string | null;
+  hours: Record<string, string> | null;
+  website: string | null;
+  phone: string | null;
+  entry_fee: string | null;
+  dress_code: string | null;
+  crowd_type: string | null;
+  vibe: string | null;
+  age_range: string | null;
+  busy_rating: number | null;
+  avg_rating: number | null;
+  last_verified_at: string | null;
 }
 
 /**
@@ -92,6 +111,25 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
           user_count: 0, // Will be populated by presence data
           created_by: row.created_by || '',
           is_verified: row.is_verified || false,
+          // Premium fields
+          directions: row.directions || undefined,
+          best_times: row.best_times || undefined,
+          parking_info: row.parking_info || undefined,
+          safety_tips: row.safety_tips || undefined,
+          amenities: row.amenities || undefined,
+          photos: row.photos || undefined,
+          cover_photo: row.cover_photo || undefined,
+          hours: row.hours || undefined,
+          website: row.website || undefined,
+          phone: row.phone || undefined,
+          entry_fee: row.entry_fee || undefined,
+          dress_code: row.dress_code || undefined,
+          crowd_type: row.crowd_type || undefined,
+          vibe: row.vibe || undefined,
+          age_range: row.age_range || undefined,
+          busy_rating: row.busy_rating || undefined,
+          avg_rating: row.avg_rating || undefined,
+          last_verified_at: row.last_verified_at || undefined,
         };
       });
 

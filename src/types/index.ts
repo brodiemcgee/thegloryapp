@@ -85,6 +85,26 @@ export interface Location {
   user_count: number;
   created_by: string;
   is_verified: boolean;
+
+  // Premium location details
+  directions?: string;
+  best_times?: string;
+  parking_info?: string;
+  safety_tips?: string;
+  amenities?: string[];
+  photos?: string[];
+  cover_photo?: string;
+  hours?: Record<string, string>;
+  website?: string;
+  phone?: string;
+  entry_fee?: string;
+  dress_code?: string;
+  crowd_type?: string;
+  vibe?: string;
+  age_range?: string;
+  busy_rating?: number; // 1-5
+  avg_rating?: number;
+  last_verified_at?: string;
 }
 
 export interface Message {
