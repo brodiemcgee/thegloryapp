@@ -320,7 +320,7 @@ export default function BetaTestersPage() {
                     ...editedSettings,
                     maxTesters: parseInt(e.target.value) || 50
                   })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Current: {stats.activeTesters + stats.completedTesters} / {settings.maxTesters} spots filled
