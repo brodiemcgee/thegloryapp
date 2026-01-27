@@ -65,7 +65,7 @@ export default function MapView() {
   const snappedLocation = useMemo(() => {
     if (!position) return null;
     return findNearestLocation(position, dbLocations, 25);
-  }, [position]);
+  }, [position, dbLocations]);
 
   // Final display position: snapped location takes priority over fuzzed position
   const displayPosition = useMemo(() => {
@@ -380,7 +380,7 @@ export default function MapView() {
     });
 
     return locationUserMap;
-  }, [onlineUsers, usersForMarkers]);
+  }, [onlineUsers, usersForMarkers, dbLocations]);
 
   // Get icon SVG based on location type
   const getLocationIcon = (type: Location['type']): string => {
@@ -525,7 +525,7 @@ export default function MapView() {
 
       locationMarkersMapRef.current.set(location.id, marker);
     });
-  }, [mapLoaded, viewMode, usersAtLocations]);
+  }, [mapLoaded, viewMode, usersAtLocations, dbLocations]);
 
   // Add/update user location marker (current user's profile photo at display position)
   useEffect(() => {
@@ -702,7 +702,7 @@ export default function MapView() {
     });
 
     return [...userPoints, ...locationPoints];
-  }, [usersForMarkers, usersAtLocations]);
+  }, [usersForMarkers, usersAtLocations, dbLocations]);
 
   return (
     <div className="relative h-full w-full flex flex-col">
