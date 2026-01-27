@@ -11,7 +11,7 @@ import MessagesView from '@/components/MessagesView';
 import HealthView from '@/components/HealthView';
 import ProfileView from '@/components/ProfileView';
 import InAppNotification from '@/components/InAppNotification';
-import { BetaStatusBanner } from '@/components/beta';
+import { BetaFeedbackButton, BetaStatusBanner } from '@/components/beta';
 import { ContactTracingProvider } from '@/contexts/ContactTracingContext';
 import { NavigationProvider, useNavigation } from '@/contexts/NavigationContext';
 import { ConversationsProvider } from '@/contexts/ConversationsContext';
@@ -63,6 +63,9 @@ function AppContent() {
 
       {/* Beta tester status banner */}
       <BetaStatusBanner />
+
+      {/* Beta feedback floating button */}
+      <BetaFeedbackButton />
 
       {/* Main content area */}
       <div className="flex-1 overflow-hidden">

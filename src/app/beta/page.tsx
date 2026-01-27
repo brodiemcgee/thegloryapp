@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   FlaskConical,
   Clock,
-  MessageSquare,
-  Bug,
   Crown,
   CheckCircle,
   XCircle,
@@ -155,49 +153,20 @@ export default function BetaSplashPage() {
         ) : (
           /* Open State - Show Requirements */
           <>
-            {/* Requirements Section */}
-            <div className="bg-hole-surface border border-hole-border rounded-xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Program Requirements
-              </h2>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">1 Hour Per Week</h3>
-                    <p className="text-sm text-hole-muted">
-                      Engage with the app for at least 1 hour each week. Browse profiles, send messages, and explore features.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-400 font-bold">10</span>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">10 Weeks Duration</h3>
-                    <p className="text-sm text-hole-muted">
-                      Complete 10 consecutive weeks of active participation. We'll track your progress automatically.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Bug className="w-5 h-5 text-orange-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">Report Bugs & Feedback</h3>
-                    <p className="text-sm text-hole-muted">
-                      Help us improve by reporting any bugs you find and sharing your feedback on the experience.
-                    </p>
-                  </div>
-                </div>
+            {/* Simple Requirements */}
+            <div className="text-center mb-6">
+              <p className="text-hole-muted text-sm mb-3">How it works:</p>
+              <div className="flex items-center justify-center gap-6 text-white">
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Use the app
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Report bugs
+                </span>
               </div>
+              <p className="text-hole-muted text-sm mt-3">That's it.</p>
             </div>
 
             {/* Reward Section */}
