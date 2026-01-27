@@ -5,8 +5,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { mockLocations } from '@/data/mockData';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useLocations } from '@/hooks/useLocations';
 import { usePresence } from '@/hooks/usePresence';
 import { useNearbyUsers } from '@/hooks/useNearbyUsers';
 import { NavigationIcon, PlusIcon, MenuIcon } from './icons';
@@ -45,6 +45,7 @@ export default function MapView() {
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
   const { locationAccuracy, setLocationAccuracy } = useSettings();
   const { favorites } = useFavorites();
+  const { locations: dbLocations, loading: locationsLoading } = useLocations();
 
   // Fetch real users from database
   const { allUsers: dbUsers, currentUserProfile } = useNearbyUsers(position, {
@@ -63,7 +64,7 @@ export default function MapView() {
   // Check if user is within 25m of a verified location (snapping)
   const snappedLocation = useMemo(() => {
     if (!position) return null;
-    return findNearestLocation(position, mockLocations, 25);
+    return findNearestLocation(position, dbLocations, 25);
   }, [position]);
 
   // Final display position: snapped location takes priority over fuzzed position
@@ -354,7 +355,7 @@ export default function MapView() {
     }> = {};
 
     // Initialize empty arrays for each location
-    mockLocations.forEach(loc => {
+    dbLocations.forEach(loc => {
       locationUserMap[loc.id] = { presenceUsers: [], nearbyUsers: [] };
     });
 
@@ -362,7 +363,7 @@ export default function MapView() {
     usersForMarkers.forEach(user => {
       if (!user.location) return;
 
-      mockLocations.forEach(loc => {
+      dbLocations.forEach(loc => {
         const distanceKm = calculateDistance(user.location!, { lat: loc.lat, lng: loc.lng });
         if (distanceKm * 1000 <= 50) { // Within 50 meters
           locationUserMap[loc.id].nearbyUsers.push(user);
@@ -428,7 +429,7 @@ export default function MapView() {
       return;
     }
 
-    const currentLocationIds = new Set(mockLocations.map(l => l.id));
+    const currentLocationIds = new Set(dbLocations.map(l => l.id));
 
     // Remove markers for locations no longer present
     locationMarkersMapRef.current.forEach((marker, id) => {
@@ -438,7 +439,7 @@ export default function MapView() {
       }
     });
 
-    mockLocations.forEach((location) => {
+    dbLocations.forEach((location) => {
       if (!map.current) return;
 
       // Skip if marker already exists (don't recreate)
@@ -687,7 +688,7 @@ export default function MapView() {
       }));
 
     // Cruising spot points (weighted by user count at each location)
-    const locationPoints = mockLocations.map((location) => {
+    const locationPoints = dbLocations.map((location) => {
       const usersData = usersAtLocations[location.id];
       const totalCount = (usersData?.nearbyUsers.length || 0) + (usersData?.presenceUsers.length || 0);
       // Base weight of 1 + bonus for each user at the location

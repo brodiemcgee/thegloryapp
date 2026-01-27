@@ -4,7 +4,6 @@
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
 import { Conversation, Message, User } from '@/types';
-import { mockConversations } from '@/data/mockData';
 
 // localStorage keys
 const STORAGE_KEYS = {
@@ -50,13 +49,9 @@ interface ConversationsProviderProps {
 }
 
 export function ConversationsProvider({ children }: ConversationsProviderProps) {
-  // Initialize state from localStorage, merging with mock data
+  // Initialize state from localStorage only - no mock data for beta
   const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const stored = getFromStorage<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
-    // Merge stored conversations with mock data, avoiding duplicates
-    const storedIds = new Set(stored.map(c => c.id));
-    const mockNotStored = mockConversations.filter(c => !storedIds.has(c.id));
-    return [...stored, ...mockNotStored];
+    return getFromStorage<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, []);
   });
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<Record<string, Message[]>>(() =>

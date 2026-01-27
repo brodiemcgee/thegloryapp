@@ -3,7 +3,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { currentUser } from '@/data/mockData';
 import { useSettings } from '@/hooks/useSettings';
 import { SettingsIcon, CheckIcon, BlockIcon, EyeIcon, CrownIcon, GiftIcon, AlbumIcon, TrashIcon } from './icons';
 import DeleteAccountModal from './DeleteAccountModal';
@@ -31,7 +30,20 @@ export default function ProfileView() {
   const { viewCount } = useProfileViews();
   const { isGhostModeEnabled, canUseGhostMode, toggleGhostMode } = useGhostMode();
   const { showInGrid, showOnMap, canUseVisibilityControls, isFullyHidden, toggleShowInGrid, toggleShowOnMap } = useVisibilityControls();
-  const [user, setUser] = useState(currentUser);
+
+  // Default empty user state - populated from auth/database
+  const defaultUser: User = {
+    id: '',
+    username: '',
+    avatar_url: null,
+    intent: 'chatting',
+    availability: 'now',
+    is_verified: false,
+    last_active: new Date().toISOString(),
+    photos: [],
+    is_online: true,
+  };
+  const [user, setUser] = useState<User>(defaultUser);
   const [showSettings, setShowSettings] = useState(false);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [showReferralProgram, setShowReferralProgram] = useState(false);

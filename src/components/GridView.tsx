@@ -3,7 +3,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { currentUser } from '@/data/mockData';
 import { User } from '@/types';
 import { GridIcon } from './icons';
 import UserCard from './UserCard';
@@ -86,10 +85,13 @@ export default function GridView() {
     // Sort by distance
     result.sort((a, b) => (a.distance_km || 999) - (b.distance_km || 999));
 
-    // Always show current user first (use db profile if available)
-    const currentProfile = currentUserProfile || currentUser;
-    result = result.filter(u => u.id !== currentProfile.id);
-    return [{ ...currentProfile, distance_km: 0 }, ...result];
+    // Show current user first if logged in
+    if (currentUserProfile) {
+      result = result.filter(u => u.id !== currentUserProfile.id);
+      return [{ ...currentUserProfile, distance_km: 0 }, ...result];
+    }
+
+    return result;
   }, [dbUsers, filters, position, currentUserProfile, favorites]);
 
   if (selectedUser) {
