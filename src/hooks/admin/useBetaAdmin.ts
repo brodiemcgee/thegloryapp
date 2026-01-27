@@ -4,6 +4,11 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from './useAdminAuth';
 
+export interface BetaSettings {
+  maxTesters: number;
+  isOpen: boolean;
+}
+
 export interface BetaInvitation {
   id: string;
   code: string;
@@ -76,6 +81,55 @@ export function useBetaAdmin() {
   const { adminRoleId, adminProfile } = useAdminAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch beta settings
+  const fetchSettings = useCallback(async (): Promise<BetaSettings | null> => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('beta_settings')
+        .select('max_testers, is_open')
+        .eq('id', 1)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      return {
+        maxTesters: data?.max_testers || 50,
+        isOpen: data?.is_open ?? true,
+      };
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+      return null;
+    }
+  }, []);
+
+  // Update beta settings
+  const updateSettings = useCallback(async (maxTesters: number, isOpen: boolean): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: updateError } = await supabase
+        .rpc('update_beta_settings', {
+          p_max_testers: maxTesters,
+          p_is_open: isOpen,
+        });
+
+      if (updateError) throw updateError;
+
+      if (!data?.success) {
+        throw new Error(data?.message || 'Failed to update settings');
+      }
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update settings';
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Fetch all beta invitations
   const fetchInvitations = useCallback(async (): Promise<BetaInvitation[]> => {
@@ -392,6 +446,8 @@ export function useBetaAdmin() {
   return {
     isLoading,
     error,
+    fetchSettings,
+    updateSettings,
     fetchInvitations,
     fetchTesters,
     fetchFeedback,

@@ -56,20 +56,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (stored) setCapturedReferralCode(stored);
       }
 
-      // Handle beta invite code
-      const betaCode = params.get('beta');
-      if (betaCode) {
-        setCapturedBetaCode(betaCode.toUpperCase());
+      // Handle beta join flag
+      const betaJoin = params.get('beta');
+      if (betaJoin === 'join') {
+        setCapturedBetaCode('join');
         // Store in sessionStorage for persistence across auth flow
-        sessionStorage.setItem('beta_code', betaCode.toUpperCase());
+        sessionStorage.setItem('beta_code', 'join');
       } else {
-        // Check sessionStorage for previously captured code
+        // Check sessionStorage for previously captured flag
         const storedBeta = sessionStorage.getItem('beta_code');
         if (storedBeta) setCapturedBetaCode(storedBeta);
       }
 
       // Clean up URL without reload
-      if (refCode || betaCode) {
+      if (refCode || betaJoin) {
         const url = new URL(window.location.href);
         url.searchParams.delete('ref');
         url.searchParams.delete('beta');
