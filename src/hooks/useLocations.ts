@@ -22,10 +22,22 @@ interface UseLocationsResult {
   refresh: () => Promise<void>;
 }
 
+interface DbLocation {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  coordinates_json: { type: string; coordinates: [number, number] } | null;
+  created_by: string | null;
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
 /**
  * Hook to fetch cruising locations from Supabase database
  *
- * Transforms PostGIS geography format to simple lat/lng for the app.
+ * Uses RPC function to get coordinates as GeoJSON.
  * Returns all active, optionally verified locations.
  *
  * @example
@@ -45,39 +57,9 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
     try {
       setError(null);
 
-      // Build query - select with PostGIS coordinates extraction
-      let query = supabase
-        .from('locations')
-        .select(`
-          id,
-          name,
-          description,
-          type,
-          coordinates,
-          created_by,
-          is_verified,
-          is_active
-        `)
-        .eq('is_active', true);
-
-      // Filter by verified if requested
-      if (verifiedOnly) {
-        query = query.eq('is_verified', true);
-      }
-
-      // Filter by type(s) if provided
-      if (type) {
-        if (Array.isArray(type)) {
-          query = query.in('type', type);
-        } else {
-          query = query.eq('type', type);
-        }
-      }
-
-      // Order by name for consistent display
-      query = query.order('name');
-
-      const { data, error: fetchError } = await query;
+      // Use RPC function to get locations with coordinates as GeoJSON
+      const { data, error: fetchError } = await supabase
+        .rpc('get_locations_with_coordinates');
 
       if (fetchError) {
         console.error('Error fetching locations:', fetchError);
@@ -91,27 +73,13 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
       }
 
       // Transform database format to app format
-      const transformedLocations: Location[] = data.map((row) => {
-        // PostGIS returns coordinates as GeoJSON or WKB
-        // Supabase returns it as a string like "POINT(lng lat)" or as GeoJSON
+      let transformedLocations: Location[] = (data as DbLocation[]).map((row) => {
         let lat = 0;
         let lng = 0;
 
-        if (row.coordinates) {
-          // If it's a GeoJSON object
-          if (typeof row.coordinates === 'object' && 'coordinates' in row.coordinates) {
-            const coords = row.coordinates.coordinates as [number, number];
-            lng = coords[0];
-            lat = coords[1];
-          }
-          // If it's a WKT string like "POINT(lng lat)"
-          else if (typeof row.coordinates === 'string') {
-            const match = row.coordinates.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-            if (match) {
-              lng = parseFloat(match[1]);
-              lat = parseFloat(match[2]);
-            }
-          }
+        if (row.coordinates_json && row.coordinates_json.coordinates) {
+          lng = row.coordinates_json.coordinates[0];
+          lat = row.coordinates_json.coordinates[1];
         }
 
         return {
@@ -126,6 +94,19 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
           is_verified: row.is_verified || false,
         };
       });
+
+      // Apply client-side filters
+      if (verifiedOnly) {
+        transformedLocations = transformedLocations.filter(loc => loc.is_verified);
+      }
+
+      if (type) {
+        if (Array.isArray(type)) {
+          transformedLocations = transformedLocations.filter(loc => type.includes(loc.type));
+        } else {
+          transformedLocations = transformedLocations.filter(loc => loc.type === type);
+        }
+      }
 
       setLocations(transformedLocations);
     } catch (err) {
