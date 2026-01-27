@@ -59,6 +59,17 @@ export default function ConsentModal({ onAccept }: ConsentModalProps) {
           >
             Decline
           </button>
+
+          <p className="text-xs text-hole-muted text-center mt-2">
+            By continuing, you agree to our{' '}
+            <a href="/terms" className="text-hole-accent hover:underline">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="/privacy" className="text-hole-accent hover:underline">
+              Privacy Policy
+            </a>
+          </p>
         </div>
       </div>
     </div>

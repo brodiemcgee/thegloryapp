@@ -396,6 +396,40 @@ export default function ProfileView() {
             </svg>
           </button>
 
+          {/* Legal Section */}
+          <div className="pt-4 border-t border-hole-border">
+            <h3 className="text-sm font-medium text-hole-muted mb-3">Legal</h3>
+            <div className="space-y-2">
+              <a
+                href="/terms"
+                className="w-full flex items-center justify-between p-3 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+              >
+                <span className="text-sm">Terms of Service</span>
+                <svg className="w-4 h-4 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+              <a
+                href="/privacy"
+                className="w-full flex items-center justify-between p-3 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+              >
+                <span className="text-sm">Privacy Policy</span>
+                <svg className="w-4 h-4 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+              <a
+                href="/data-protection"
+                className="w-full flex items-center justify-between p-3 bg-hole-surface border border-hole-border rounded-lg transition-colors hover:bg-hole-border"
+              >
+                <span className="text-sm">Data Protection</span>
+                <svg className="w-4 h-4 text-hole-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
           {/* Sign out */}
           <button
             onClick={handleSignOut}
