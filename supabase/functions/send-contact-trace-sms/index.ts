@@ -4,7 +4,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
-const TWILIO_PHONE_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER');
+const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
 
 interface ContactTraceSmsRequest {
   phone_number: string;
@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_MESSAGING_SERVICE_SID) {
       throw new Error('Twilio credentials are not configured');
     }
 
@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
 
     const formData = new URLSearchParams();
     formData.append('To', phone_number);
-    formData.append('From', TWILIO_PHONE_NUMBER);
+    formData.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
     formData.append('Body', message);
 
     const response = await fetch(twilioUrl, {
