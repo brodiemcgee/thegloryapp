@@ -46,7 +46,6 @@ export default function ContactFormModal({
   const [notes, setNotes] = useState(contact?.notes || '');
   const [phoneHint, setPhoneHint] = useState(contact?.phone_hint || '');
   const [socialHandle, setSocialHandle] = useState(contact?.social_handle || '');
-  const [appearanceNotes, setAppearanceNotes] = useState(contact?.appearance_notes || '');
   const [preferredActivities, setPreferredActivities] = useState<string[]>(contact?.preferred_activities || []);
   const [hivStatus, setHivStatus] = useState<ContactHivStatus | ''>(contact?.hiv_status || '');
   const [lastTestedDate, setLastTestedDate] = useState(contact?.last_tested_date || '');
@@ -80,7 +79,6 @@ export default function ContactFormModal({
         notes: notes.trim() || undefined,
         phone_hint: phoneHint.trim() || undefined,
         social_handle: socialHandle.trim() || undefined,
-        appearance_notes: appearanceNotes.trim() || undefined,
         preferred_activities: preferredActivities.length > 0 ? preferredActivities : undefined,
         hiv_status: hivStatus || undefined,
         last_tested_date: lastTestedDate || undefined,
@@ -164,16 +162,6 @@ export default function ContactFormModal({
             />
           </div>
 
-          <div>
-            <label className="text-xs text-hole-muted mb-1 block">Appearance Notes</label>
-            <textarea
-              value={appearanceNotes}
-              onChange={(e) => setAppearanceNotes(e.target.value)}
-              placeholder="Physical description to help identify them..."
-              className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 text-sm outline-none focus:border-hole-accent resize-none"
-              rows={2}
-            />
-          </div>
         </div>
 
         {/* Preferred Activities */}
