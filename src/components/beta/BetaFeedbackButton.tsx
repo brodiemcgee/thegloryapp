@@ -19,7 +19,7 @@ export default function BetaFeedbackButton() {
       {/* Floating Action Button */}
       <button
         onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-20 right-4 w-12 h-12 bg-purple-600 hover:bg-purple-700 rounded-full shadow-lg flex items-center justify-center text-white transition-colors z-40"
+        className="fixed bottom-20 left-4 w-12 h-12 bg-purple-600 hover:bg-purple-700 rounded-full shadow-lg flex items-center justify-center text-white transition-colors z-40"
         aria-label="Submit feedback"
       >
         <Bug className="w-5 h-5" />
