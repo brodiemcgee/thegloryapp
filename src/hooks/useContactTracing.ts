@@ -14,6 +14,15 @@ export interface ContactTraceNotification {
   created_at: string;
 }
 
+// Manual contacts that need to be notified outside the app
+export interface ManualContactToNotify {
+  contact_id: string;
+  contact_name: string;
+  phone_number: string | null;
+  social_handle: string | null;
+  met_at: string;
+}
+
 // STI types that can be reported
 export const STI_TYPES = [
   { id: 'chlamydia', label: 'Chlamydia', lookbackDays: 30 },
@@ -166,6 +175,31 @@ export function useContactTracing() {
     return notifications.filter((n) => n.read_at === null);
   };
 
+  // Get manual contacts that need to be notified for a positive result
+  // These contacts can't receive in-app notifications, so user needs to contact them directly
+  const getManualContactsToNotify = async (
+    stiType: string,
+    testDate: string
+  ): Promise<ManualContactToNotify[]> => {
+    if (!user) throw new Error('Not authenticated');
+
+    const stiConfig = STI_TYPES.find((s) => s.id === stiType);
+    const lookbackDays = stiConfig?.lookbackDays || 30;
+
+    const { data, error: rpcError } = await supabase.rpc(
+      'get_manual_contacts_to_notify',
+      {
+        p_user_id: user.id,
+        p_test_date: testDate,
+        p_lookback_days: lookbackDays,
+      }
+    );
+
+    if (rpcError) throw rpcError;
+
+    return (data || []) as ManualContactToNotify[];
+  };
+
   return {
     notifications,
     unreadCount,
@@ -175,6 +209,7 @@ export function useContactTracing() {
     markAllAsRead,
     sendNotifications,
     getUnreadNotifications,
+    getManualContactsToNotify,
     refresh: loadNotifications,
   };
 }

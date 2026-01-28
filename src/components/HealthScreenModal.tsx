@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { XIcon } from './icons';
-import { useContactTracingContext, STI_TYPES } from '@/contexts/ContactTracingContext';
+import { useContactTracingContext, STI_TYPES, ManualContactToNotify } from '@/contexts/ContactTracingContext';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { StiResult, StiResults, deriveStatusFromResults } from '@/hooks/useHealthScreens';
 
@@ -30,7 +30,7 @@ export default function HealthScreenModal({
   onSave,
   initialData,
 }: HealthScreenModalProps) {
-  const { sendNotifications } = useContactTracingContext();
+  const { sendNotifications, getManualContactsToNotify } = useContactTracingContext();
   const { settings } = useHealthSettings();
 
   const [testDate, setTestDate] = useState(
@@ -43,6 +43,8 @@ export default function HealthScreenModal({
   const [saving, setSaving] = useState(false);
   const [showNotifyPrompt, setShowNotifyPrompt] = useState(false);
   const [notifyPartners, setNotifyPartners] = useState<boolean | null>(null);
+  const [manualContacts, setManualContacts] = useState<ManualContactToNotify[]>([]);
+  const [showManualContactsModal, setShowManualContactsModal] = useState(false);
 
   const handleStiResultChange = (stiId: string, value: StiResult) => {
     setStiResults((prev) => ({
@@ -90,17 +92,37 @@ export default function HealthScreenModal({
     try {
       setSaving(true);
 
+      // Collect all manual contacts across all positive STIs
+      const allManualContacts: ManualContactToNotify[] = [];
+
       // Send notifications if user chose to notify
       if (notifyPartners === true && positiveResults.length > 0) {
         for (const [stiId, stiResult] of Object.entries(stiResults)) {
           if (stiResult === 'positive') {
+            // Send in-app notifications to app users
             await sendNotifications(stiId, testDate);
+
+            // Get manual contacts that need to be notified
+            const contacts = await getManualContactsToNotify(stiId, testDate);
+            for (const contact of contacts) {
+              // Avoid duplicates
+              if (!allManualContacts.some(c => c.contact_id === contact.contact_id)) {
+                allManualContacts.push(contact);
+              }
+            }
           }
         }
       }
 
       await onSave(testDate, stiResults, notes || undefined);
-      onClose();
+
+      // If there are manual contacts to notify, show them
+      if (allManualContacts.length > 0) {
+        setManualContacts(allManualContacts);
+        setShowManualContactsModal(true);
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error('Failed to save health screen:', err);
       alert('Failed to save. Please try again.');
@@ -307,6 +329,73 @@ export default function HealthScreenModal({
           </button>
         </div>
       </div>
+
+      {/* Manual Contacts Modal */}
+      {showManualContactsModal && manualContacts.length > 0 && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" />
+          <div className="relative w-full max-w-md bg-hole-bg border border-hole-border rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold">Manual Contacts to Notify</h3>
+                <p className="text-sm text-hole-muted mt-1">
+                  These contacts aren&apos;t on the app. Please notify them directly using the contact info below.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {manualContacts.map((contact) => (
+                <div
+                  key={contact.contact_id}
+                  className="bg-hole-surface rounded-lg p-3 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{contact.contact_name}</span>
+                    <span className="text-xs text-hole-muted">
+                      Met: {new Date(contact.met_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {contact.phone_number && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-hole-muted">Phone:</span>
+                      <a
+                        href={`tel:${contact.phone_number}`}
+                        className="text-sm text-hole-accent hover:underline"
+                      >
+                        {contact.phone_number}
+                      </a>
+                    </div>
+                  )}
+                  {contact.social_handle && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-hole-muted">Social:</span>
+                      <span className="text-sm">{contact.social_handle}</span>
+                    </div>
+                  )}
+                  {!contact.phone_number && !contact.social_handle && (
+                    <p className="text-xs text-hole-muted italic">
+                      No contact info saved. Consider adding their phone number to their contact profile.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-hole-accent text-white rounded-lg font-medium hover:bg-hole-accent-hover transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
