@@ -44,7 +44,7 @@ export default function ContactFormModal({
 
   const [name, setName] = useState(contact?.name || '');
   const [notes, setNotes] = useState(contact?.notes || '');
-  const [phoneHint, setPhoneHint] = useState(contact?.phone_hint || '');
+  const [phoneNumber, setPhoneNumber] = useState(contact?.phone_number || '');
   const [socialHandle, setSocialHandle] = useState(contact?.social_handle || '');
   const [preferredActivities, setPreferredActivities] = useState<string[]>(contact?.preferred_activities || []);
   const [hivStatus, setHivStatus] = useState<ContactHivStatus | ''>(contact?.hiv_status || '');
@@ -77,7 +77,7 @@ export default function ContactFormModal({
       await onSave({
         name: name.trim(),
         notes: notes.trim() || undefined,
-        phone_hint: phoneHint.trim() || undefined,
+        phone_number: phoneNumber.trim() || undefined,
         social_handle: socialHandle.trim() || undefined,
         preferred_activities: preferredActivities.length > 0 ? preferredActivities : undefined,
         hiv_status: hivStatus || undefined,
@@ -141,12 +141,12 @@ export default function ContactFormModal({
           <h3 className="text-sm text-hole-muted font-medium">Identification</h3>
 
           <div>
-            <label className="text-xs text-hole-muted mb-1 block">Phone Hint</label>
+            <label className="text-xs text-hole-muted mb-1 block">Phone Number</label>
             <input
-              type="text"
-              value={phoneHint}
-              onChange={(e) => setPhoneHint(e.target.value)}
-              placeholder="e.g., ends in 1234"
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="For contact tracing"
               className="w-full bg-hole-surface border border-hole-border rounded-lg p-3 text-sm outline-none focus:border-hole-accent"
             />
           </div>

@@ -193,9 +193,8 @@ export interface Contact {
   user_id: string;
   name: string;
   notes: string | null;
-  phone_hint: string | null;
+  phone_number: string | null;  // Full phone number for contact tracing
   social_handle: string | null;
-  appearance_notes: string | null;
   preferred_activities: string[] | null;
   hiv_status: ContactHivStatus | null;
   last_tested_date: string | null;

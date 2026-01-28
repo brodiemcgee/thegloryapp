@@ -13,9 +13,8 @@ export interface ContactWithEncounters extends Contact {
 export interface CreateContactData {
   name: string;
   notes?: string;
-  phone_hint?: string;
+  phone_number?: string;  // Full phone number for contact tracing
   social_handle?: string;
-  appearance_notes?: string;
   preferred_activities?: string[];
   hiv_status?: ContactHivStatus;
   last_tested_date?: string;
@@ -107,9 +106,8 @@ export function useContacts() {
         user_id: user.id,
         name: data.name,
         notes: data.notes || null,
-        phone_hint: data.phone_hint || null,
+        phone_number: data.phone_number || null,
         social_handle: data.social_handle || null,
-        appearance_notes: data.appearance_notes || null,
         preferred_activities: data.preferred_activities || null,
         hiv_status: data.hiv_status || null,
         last_tested_date: data.last_tested_date || null,
@@ -133,9 +131,8 @@ export function useContacts() {
     const updates: Record<string, unknown> = {};
     if (data.name !== undefined) updates.name = data.name;
     if (data.notes !== undefined) updates.notes = data.notes || null;
-    if (data.phone_hint !== undefined) updates.phone_hint = data.phone_hint || null;
+    if (data.phone_number !== undefined) updates.phone_number = data.phone_number || null;
     if (data.social_handle !== undefined) updates.social_handle = data.social_handle || null;
-    if (data.appearance_notes !== undefined) updates.appearance_notes = data.appearance_notes || null;
     if (data.preferred_activities !== undefined) updates.preferred_activities = data.preferred_activities || null;
     if (data.hiv_status !== undefined) updates.hiv_status = data.hiv_status || null;
     if (data.last_tested_date !== undefined) updates.last_tested_date = data.last_tested_date || null;

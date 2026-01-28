@@ -179,25 +179,19 @@ export default function ContactDetailView({
         {manualContact && (
           <>
             {/* Identification */}
-            {(manualContact.phone_hint || manualContact.social_handle || manualContact.appearance_notes) && (
+            {(manualContact.phone_number || manualContact.social_handle) && (
               <div className="bg-hole-surface rounded-lg p-4 space-y-3">
                 <h3 className="text-sm text-hole-muted font-medium">Identification</h3>
-                {manualContact.phone_hint && (
+                {manualContact.phone_number && (
                   <div>
                     <span className="text-xs text-hole-muted">Phone</span>
-                    <p className="text-sm">{manualContact.phone_hint}</p>
+                    <p className="text-sm">{manualContact.phone_number}</p>
                   </div>
                 )}
                 {manualContact.social_handle && (
                   <div>
                     <span className="text-xs text-hole-muted">Social</span>
                     <p className="text-sm">{manualContact.social_handle}</p>
-                  </div>
-                )}
-                {manualContact.appearance_notes && (
-                  <div>
-                    <span className="text-xs text-hole-muted">Appearance</span>
-                    <p className="text-sm text-gray-300">{manualContact.appearance_notes}</p>
                   </div>
                 )}
               </div>
