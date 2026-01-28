@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from 'react';
 import { XIcon } from './icons';
-import { useContactTracingContext, STI_TYPES, ManualContactToNotify } from '@/contexts/ContactTracingContext';
+import { useContactTracingContext, STI_TYPES, ContactToNotify } from '@/contexts/ContactTracingContext';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { StiResult, StiResults, deriveStatusFromResults } from '@/hooks/useHealthScreens';
 
@@ -30,7 +30,7 @@ export default function HealthScreenModal({
   onSave,
   initialData,
 }: HealthScreenModalProps) {
-  const { sendNotifications, getManualContactsToNotify } = useContactTracingContext();
+  const { sendAllNotifications } = useContactTracingContext();
   const { settings } = useHealthSettings();
 
   const [testDate, setTestDate] = useState(
@@ -43,8 +43,9 @@ export default function HealthScreenModal({
   const [saving, setSaving] = useState(false);
   const [showNotifyPrompt, setShowNotifyPrompt] = useState(false);
   const [notifyPartners, setNotifyPartners] = useState<boolean | null>(null);
-  const [manualContacts, setManualContacts] = useState<ManualContactToNotify[]>([]);
+  const [contactsWithoutPhone, setContactsWithoutPhone] = useState<ContactToNotify[]>([]);
   const [showManualContactsModal, setShowManualContactsModal] = useState(false);
+  const [notificationsSent, setNotificationsSent] = useState({ app: 0, sms: 0 });
 
   const handleStiResultChange = (stiId: string, value: StiResult) => {
     setStiResults((prev) => ({
@@ -92,33 +93,36 @@ export default function HealthScreenModal({
     try {
       setSaving(true);
 
-      // Collect all manual contacts across all positive STIs
-      const allManualContacts: ManualContactToNotify[] = [];
+      let hasManualContacts = false;
+      let sentNotifications = { app: 0, sms: 0 };
 
       // Send notifications if user chose to notify
       if (notifyPartners === true && positiveResults.length > 0) {
-        for (const [stiId, stiResult] of Object.entries(stiResults)) {
-          if (stiResult === 'positive') {
-            // Send in-app notifications to app users
-            await sendNotifications(stiId, testDate);
+        // Get all positive STI types
+        const positiveStiTypes = Object.entries(stiResults)
+          .filter(([, result]) => result === 'positive')
+          .map(([stiId]) => stiId);
 
-            // Get manual contacts that need to be notified
-            const contacts = await getManualContactsToNotify(stiId, testDate);
-            for (const contact of contacts) {
-              // Avoid duplicates
-              if (!allManualContacts.some(c => c.contact_id === contact.contact_id)) {
-                allManualContacts.push(contact);
-              }
-            }
-          }
+        // Send all notifications (app users + SMS to contacts with phone numbers)
+        const result = await sendAllNotifications(positiveStiTypes, testDate);
+
+        sentNotifications = {
+          app: result.appUsersNotified,
+          sms: result.smsMessagesSent,
+        };
+        setNotificationsSent(sentNotifications);
+
+        // Store contacts without phone numbers that user needs to contact manually
+        if (result.manualContactsNoPhone.length > 0) {
+          setContactsWithoutPhone(result.manualContactsNoPhone);
+          hasManualContacts = true;
         }
       }
 
       await onSave(testDate, stiResults, notes || undefined);
 
-      // If there are manual contacts to notify, show them
-      if (allManualContacts.length > 0) {
-        setManualContacts(allManualContacts);
+      // Show summary modal if notifications were sent OR there are contacts to contact manually
+      if (hasManualContacts || sentNotifications.app > 0 || sentNotifications.sms > 0) {
         setShowManualContactsModal(true);
       } else {
         onClose();
@@ -330,62 +334,76 @@ export default function HealthScreenModal({
         </div>
       </div>
 
-      {/* Manual Contacts Modal */}
-      {showManualContactsModal && manualContacts.length > 0 && (
+      {/* Notification Summary Modal */}
+      {showManualContactsModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" />
           <div className="relative w-full max-w-md bg-hole-bg border border-hole-border rounded-lg p-4 space-y-4 max-h-[80vh] overflow-auto">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Manual Contacts to Notify</h3>
-                <p className="text-sm text-hole-muted mt-1">
-                  These contacts aren&apos;t on the app. Please notify them directly using the contact info below.
+            {/* Success Summary */}
+            {(notificationsSent.app > 0 || notificationsSent.sms > 0) && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-green-400 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-medium">Notifications Sent</span>
+                </div>
+                <p className="text-sm text-hole-muted">
+                  {notificationsSent.app > 0 && (
+                    <span>{notificationsSent.app} app user{notificationsSent.app !== 1 ? 's' : ''} notified anonymously. </span>
+                  )}
+                  {notificationsSent.sms > 0 && (
+                    <span>{notificationsSent.sms} SMS message{notificationsSent.sms !== 1 ? 's' : ''} sent.</span>
+                  )}
                 </p>
               </div>
-            </div>
+            )}
 
-            <div className="space-y-3">
-              {manualContacts.map((contact) => (
-                <div
-                  key={contact.contact_id}
-                  className="bg-hole-surface rounded-lg p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{contact.contact_name}</span>
-                    <span className="text-xs text-hole-muted">
-                      Met: {new Date(contact.met_at).toLocaleDateString()}
-                    </span>
+            {/* Contacts without phone numbers */}
+            {contactsWithoutPhone.length > 0 && (
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                   </div>
-                  {contact.phone_number && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-hole-muted">Phone:</span>
-                      <a
-                        href={`tel:${contact.phone_number}`}
-                        className="text-sm text-hole-accent hover:underline"
-                      >
-                        {contact.phone_number}
-                      </a>
-                    </div>
-                  )}
-                  {contact.social_handle && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-hole-muted">Social:</span>
-                      <span className="text-sm">{contact.social_handle}</span>
-                    </div>
-                  )}
-                  {!contact.phone_number && !contact.social_handle && (
-                    <p className="text-xs text-hole-muted italic">
-                      No contact info saved. Consider adding their phone number to their contact profile.
+                  <div>
+                    <h3 className="font-semibold">Please Contact These People</h3>
+                    <p className="text-sm text-hole-muted mt-1">
+                      These contacts don&apos;t have phone numbers saved. Please reach out to them directly.
                     </p>
-                  )}
+                  </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="space-y-3">
+                  {contactsWithoutPhone.map((contact) => (
+                    <div
+                      key={contact.contact_id}
+                      className="bg-hole-surface rounded-lg p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{contact.contact_name}</span>
+                        <span className="text-xs text-hole-muted">
+                          {contact.time_ago_text}
+                        </span>
+                      </div>
+                      {contact.phone_number && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-hole-muted">Social:</span>
+                          <span className="text-sm">{contact.phone_number}</span>
+                        </div>
+                      )}
+                      {!contact.phone_number && (
+                        <p className="text-xs text-hole-muted italic">
+                          No contact info saved. Consider adding their phone number.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <button
               onClick={onClose}

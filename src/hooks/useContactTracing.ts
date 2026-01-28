@@ -9,17 +9,19 @@ export interface ContactTraceNotification {
   recipient_user_id: string;
   sti_type: string;
   exposure_date: string;
+  time_ago_text: string | null;  // Vague timing like "about 2 weeks ago"
   sent_at: string | null;
   read_at: string | null;
   created_at: string;
 }
 
-// Manual contacts that need to be notified outside the app
-export interface ManualContactToNotify {
+// Contact that needs to be notified
+export interface ContactToNotify {
+  contact_type: 'app_user' | 'manual_with_phone' | 'manual_no_phone';
   contact_id: string;
   contact_name: string;
   phone_number: string | null;
-  social_handle: string | null;
+  time_ago_text: string;
   met_at: string;
 }
 
@@ -175,29 +177,24 @@ export function useContactTracing() {
     return notifications.filter((n) => n.read_at === null);
   };
 
-  // Get manual contacts that need to be notified for a positive result
-  // These contacts can't receive in-app notifications, so user needs to contact them directly
-  const getManualContactsToNotify = async (
-    stiType: string,
+  // Get all contacts that need to be notified for a positive result
+  // Returns app users, manual contacts with phone, and manual contacts without phone
+  const getContactsForNotification = async (
     testDate: string
-  ): Promise<ManualContactToNotify[]> => {
+  ): Promise<ContactToNotify[]> => {
     if (!user) throw new Error('Not authenticated');
 
-    const stiConfig = STI_TYPES.find((s) => s.id === stiType);
-    const lookbackDays = stiConfig?.lookbackDays || 30;
-
     const { data, error: rpcError } = await supabase.rpc(
-      'get_manual_contacts_to_notify',
+      'get_contacts_for_notification',
       {
         p_user_id: user.id,
         p_test_date: testDate,
-        p_lookback_days: lookbackDays,
       }
     );
 
     if (rpcError) throw rpcError;
 
-    return (data || []) as ManualContactToNotify[];
+    return (data || []) as ContactToNotify[];
   };
 
   return {
@@ -209,7 +206,7 @@ export function useContactTracing() {
     markAllAsRead,
     sendNotifications,
     getUnreadNotifications,
-    getManualContactsToNotify,
+    getContactsForNotification,
     refresh: loadNotifications,
   };
 }

@@ -17,12 +17,19 @@ export default function ContactTraceAlert({
   const stiInfo = STI_TYPES.find((s) => s.id === notification.sti_type);
   const stiLabel = stiInfo?.label || notification.sti_type;
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+  // Use vague time if available, otherwise fall back to approximate date
+  const getTimeDescription = () => {
+    if (notification.time_ago_text) {
+      return notification.time_ago_text;
+    }
+    // Fallback for old notifications without time_ago_text
+    const daysAgo = Math.floor(
+      (Date.now() - new Date(notification.exposure_date).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysAgo <= 7) return 'in the past week';
+    if (daysAgo <= 14) return 'about 2 weeks ago';
+    if (daysAgo <= 30) return 'about a month ago';
+    return 'several weeks ago';
   };
 
   return (
@@ -50,8 +57,7 @@ export default function ContactTraceAlert({
             <span className="font-medium text-white">{stiLabel}</span>.
           </p>
           <p className="text-sm text-hole-muted mt-1">
-            Based on an encounter around {formatDate(notification.exposure_date)},
-            you may have been exposed.
+            Based on an encounter {getTimeDescription()}, you may have been exposed.
           </p>
           <p className="text-xs text-hole-muted mt-2">
             Consider getting tested. This notification is anonymous - no identifying

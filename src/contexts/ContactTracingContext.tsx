@@ -11,17 +11,19 @@ export interface ContactTraceNotification {
   recipient_user_id: string;
   sti_type: string;
   exposure_date: string;
+  time_ago_text: string | null;  // Vague timing like "about 2 weeks ago"
   sent_at: string | null;
   read_at: string | null;
   created_at: string;
 }
 
-// Manual contacts that need to be notified outside the app
-export interface ManualContactToNotify {
+// Contact that needs to be notified
+export interface ContactToNotify {
+  contact_type: 'app_user' | 'manual_with_phone' | 'manual_no_phone';
   contact_id: string;
   contact_name: string;
   phone_number: string | null;
-  social_handle: string | null;
+  time_ago_text: string;
   met_at: string;
 }
 
@@ -37,6 +39,12 @@ export const STI_TYPES = [
   { id: 'other', label: 'Other STI', lookbackDays: 30 },
 ];
 
+interface NotificationResult {
+  appUsersNotified: number;
+  smsMessagesSent: number;
+  manualContactsNoPhone: ContactToNotify[];  // Contacts user needs to reach out to manually
+}
+
 interface ContactTracingContextType {
   notifications: ContactTraceNotification[];
   unreadCount: number;
@@ -44,9 +52,8 @@ interface ContactTracingContextType {
   error: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
-  sendNotifications: (stiType: string, testDate: string) => Promise<number>;
+  sendAllNotifications: (stiTypes: string[], testDate: string) => Promise<NotificationResult>;
   getUnreadNotifications: () => ContactTraceNotification[];
-  getManualContactsToNotify: (stiType: string, testDate: string) => Promise<ManualContactToNotify[]>;
   refresh: () => Promise<void>;
 }
 
@@ -132,83 +139,113 @@ export function ContactTracingProvider({ children }: { children: ReactNode }) {
     setUnreadCount(0);
   };
 
-  // Send anonymous notifications for a positive result
-  const sendNotifications = async (stiType: string, testDate: string) => {
+  // Send all notifications for positive results
+  // - App users get in-app notifications
+  // - Manual contacts with phone numbers get SMS
+  // - Manual contacts without phone numbers are returned for user to contact manually
+  const sendAllNotifications = async (
+    stiTypes: string[],
+    testDate: string
+  ): Promise<NotificationResult> => {
     if (!user) throw new Error('Not authenticated');
 
-    const stiConfig = STI_TYPES.find((s) => s.id === stiType);
-    const lookbackDays = stiConfig?.lookbackDays || 30;
+    const result: NotificationResult = {
+      appUsersNotified: 0,
+      smsMessagesSent: 0,
+      manualContactsNoPhone: [],
+    };
 
-    const { data, error: rpcError } = await supabase.rpc(
-      'send_contact_trace_notifications',
-      {
-        p_user_id: user.id,
-        p_sti_type: stiType,
-        p_test_date: testDate,
-        p_lookback_days: lookbackDays,
+    // Track contacts we've already processed to avoid duplicates across STI types
+    const processedAppUsers = new Set<string>();
+    const processedSmsContacts = new Set<string>();
+    const processedNoPhoneContacts = new Set<string>();
+
+    for (const stiType of stiTypes) {
+      // Get all contacts for this STI type
+      const { data: contacts, error: fetchError } = await supabase.rpc(
+        'get_contacts_for_notification',
+        {
+          p_user_id: user.id,
+          p_test_date: testDate,
+        }
+      );
+
+      if (fetchError) {
+        console.error('Error fetching contacts:', fetchError);
+        continue;
       }
-    );
 
-    if (rpcError) throw rpcError;
+      const allContacts = (contacts || []) as ContactToNotify[];
 
-    const notificationCount = data as number;
+      // Process app users - send in-app notifications
+      for (const contact of allContacts.filter(c => c.contact_type === 'app_user')) {
+        if (processedAppUsers.has(contact.contact_id)) continue;
+        processedAppUsers.add(contact.contact_id);
 
-    // If notifications were sent, trigger push notifications for recipients
-    if (notificationCount > 0) {
-      try {
-        const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
-        const { data: recentNotifications } = await supabase
-          .from('contact_trace_notifications')
-          .select('recipient_user_id')
-          .eq('sti_type', stiType)
-          .gte('created_at', oneMinuteAgo);
+        // Send in-app notification via the existing RPC
+        const { data: count, error: rpcError } = await supabase.rpc(
+          'send_contact_trace_notifications',
+          {
+            p_user_id: user.id,
+            p_sti_type: stiType,
+            p_test_date: testDate,
+          }
+        );
 
-        if (recentNotifications) {
-          const recipientIds = Array.from(new Set(recentNotifications.map(n => n.recipient_user_id)));
+        if (!rpcError && count) {
+          result.appUsersNotified += count as number;
 
-          for (const recipientId of recipientIds) {
+          // Trigger push notifications
+          try {
             supabase.functions.invoke('send-push-notification', {
-              body: { user_id: recipientId },
+              body: { user_id: contact.contact_id },
             }).catch(err => {
               console.warn('Push notification failed:', err);
             });
+          } catch (pushErr) {
+            console.warn('Failed to send push notification:', pushErr);
           }
         }
-      } catch (pushErr) {
-        console.warn('Failed to send push notifications:', pushErr);
+      }
+
+      // Process manual contacts with phone numbers - send SMS
+      for (const contact of allContacts.filter(c => c.contact_type === 'manual_with_phone')) {
+        if (processedSmsContacts.has(contact.contact_id)) continue;
+        processedSmsContacts.add(contact.contact_id);
+
+        try {
+          const { error: smsError } = await supabase.functions.invoke('send-contact-trace-sms', {
+            body: {
+              phone_number: contact.phone_number,
+              sti_type: stiType,
+              time_ago_text: contact.time_ago_text,
+            },
+          });
+
+          if (!smsError) {
+            result.smsMessagesSent++;
+          } else {
+            console.warn('SMS send failed:', smsError);
+          }
+        } catch (smsErr) {
+          console.warn('Failed to send SMS:', smsErr);
+        }
+      }
+
+      // Collect manual contacts without phone numbers
+      for (const contact of allContacts.filter(c => c.contact_type === 'manual_no_phone')) {
+        if (processedNoPhoneContacts.has(contact.contact_id)) continue;
+        processedNoPhoneContacts.add(contact.contact_id);
+        result.manualContactsNoPhone.push(contact);
       }
     }
 
-    return notificationCount;
+    return result;
   };
 
   // Get unread notifications
   const getUnreadNotifications = () => {
     return notifications.filter((n) => n.read_at === null);
-  };
-
-  // Get manual contacts that need to be notified (for manual outreach)
-  const getManualContactsToNotify = async (
-    stiType: string,
-    testDate: string
-  ): Promise<ManualContactToNotify[]> => {
-    if (!user) throw new Error('Not authenticated');
-
-    const stiConfig = STI_TYPES.find((s) => s.id === stiType);
-    const lookbackDays = stiConfig?.lookbackDays || 30;
-
-    const { data, error: rpcError } = await supabase.rpc(
-      'get_manual_contacts_to_notify',
-      {
-        p_user_id: user.id,
-        p_test_date: testDate,
-        p_lookback_days: lookbackDays,
-      }
-    );
-
-    if (rpcError) throw rpcError;
-
-    return (data || []) as ManualContactToNotify[];
   };
 
   return (
@@ -220,9 +257,8 @@ export function ContactTracingProvider({ children }: { children: ReactNode }) {
         error,
         markAsRead,
         markAllAsRead,
-        sendNotifications,
+        sendAllNotifications,
         getUnreadNotifications,
-        getManualContactsToNotify,
         refresh: loadNotifications,
       }}
     >
