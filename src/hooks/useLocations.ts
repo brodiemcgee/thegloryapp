@@ -40,7 +40,7 @@ interface DbLocation {
   amenities: string[] | null;
   photos: string[] | null;
   cover_photo: string | null;
-  hours: Record<string, string> | null;
+  hours: string | null;  // JSON string that needs parsing
   website: string | null;
   phone: string | null;
   entry_fee: string | null;
@@ -122,7 +122,7 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
           amenities: row.amenities || undefined,
           photos: row.photos || undefined,
           cover_photo: row.cover_photo || undefined,
-          hours: row.hours || undefined,
+          hours: row.hours ? JSON.parse(row.hours) : undefined,
           website: row.website || undefined,
           phone: row.phone || undefined,
           entry_fee: row.entry_fee || undefined,
