@@ -45,15 +45,7 @@ export default function MapView() {
   const { onlineUsers, isConnected, updatePresence } = usePresence('map-presence');
   const { locationAccuracy, setLocationAccuracy } = useSettings();
   const { favorites } = useFavorites();
-  const { locations: dbLocations, loading: locationsLoading, error: locationsError } = useLocations();
-
-  // Debug logging for locations
-  useEffect(() => {
-    console.log(`[MapView] dbLocations updated: ${dbLocations.length} locations, loading: ${locationsLoading}, error: ${locationsError}`);
-    if (dbLocations.length > 0) {
-      console.log('[MapView] First 3 locations:', dbLocations.slice(0, 3).map(l => ({ name: l.name, lat: l.lat, lng: l.lng })));
-    }
-  }, [dbLocations, locationsLoading, locationsError]);
+  const { locations: dbLocations, loading: locationsLoading } = useLocations();
 
   // Fetch real users from database
   const { allUsers: dbUsers, currentUserProfile } = useNearbyUsers(position, {

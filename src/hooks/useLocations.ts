@@ -87,12 +87,9 @@ export function useLocations(options: UseLocationsOptions = {}): UseLocationsRes
       }
 
       if (!data) {
-        console.log('[useLocations] No data returned from RPC');
         setLocations([]);
         return;
       }
-
-      console.log(`[useLocations] Fetched ${data.length} locations from database`);
 
       // Transform database format to app format
       let transformedLocations: Location[] = (data as DbLocation[]).map((row) => {
