@@ -35,10 +35,15 @@ body {
 }
 
 /* Safe area insets for mobile */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+.safe-bottom {
+  /* Minimum padding for browser toolbars (Chrome iOS, etc.) */
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+}
+
+/* Dynamic viewport height for browsers with UI toolbars */
+.h-screen-safe {
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Reduced motion */

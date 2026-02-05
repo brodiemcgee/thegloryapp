@@ -57,7 +57,7 @@ function AppContent() {
   };
 
   return (
-    <main className="h-screen w-screen flex flex-col bg-hole-bg overflow-hidden">
+    <main className="h-screen-safe w-screen flex flex-col bg-hole-bg overflow-hidden">
       {/* In-app notifications */}
       <InAppNotification onNavigate={handleNotificationNavigate} />
 
