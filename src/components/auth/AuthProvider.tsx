@@ -94,7 +94,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         .eq('id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error && error.code !== 'PGRST116' && process.env.NODE_ENV === 'development') {
         console.error('Error fetching profile:', error);
       }
 
@@ -182,9 +182,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     );
   }
 
-  // User is authenticated and onboarded - require age verification before showing app
+  // User is authenticated and onboarded
+  // TODO: Re-enable age verification when Stripe Identity is configured
+  // For beta, we skip age verification (users confirm age during signup)
   return (
-    <AgeVerificationGate requireVerification={true}>
+    <AgeVerificationGate requireVerification={false}>
       {children}
     </AgeVerificationGate>
   );

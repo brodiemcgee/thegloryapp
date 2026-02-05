@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { XIcon } from './icons';
+import { toast } from 'react-hot-toast';
 
 interface MedicationLogModalProps {
   type: 'prep' | 'doxypep';
@@ -32,7 +33,7 @@ export default function MedicationLogModal({
       onClose();
     } catch (err) {
       console.error('Failed to log medication:', err);
-      alert('Failed to save. Please try again.');
+      toast.error('Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }

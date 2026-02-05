@@ -3,38 +3,91 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-const STORAGE_KEY = 'blocked_users';
+import { useAuth } from './useAuth';
+import { supabase } from '@/lib/supabase';
 
 export function useBlock() {
+  const { user } = useAuth();
   const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Load blocked users from localStorage on mount
+  // Load blocked users from Supabase on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    async function fetchBlockedUsers() {
+      if (!user) {
+        setBlockedUsers([]);
+        return;
+      }
+
       try {
-        setBlockedUsers(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse blocked users:', e);
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', user.id);
+
+        if (error) throw error;
+
+        const blockedIds = (data || []).map((block) => block.blocked_id);
+        setBlockedUsers(blockedIds);
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching blocked users:', err);
+        }
+      } finally {
+        setLoading(false);
       }
     }
-  }, []);
 
-  // Save to localStorage whenever blockedUsers changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(blockedUsers));
-  }, [blockedUsers]);
+    fetchBlockedUsers();
+  }, [user]);
 
-  const blockUser = (userId: string) => {
-    setBlockedUsers((prev) => {
-      if (prev.includes(userId)) return prev;
-      return [...prev, userId];
-    });
+  const blockUser = async (userId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('blocks')
+        .insert({
+          blocker_id: user.id,
+          blocked_id: userId,
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setBlockedUsers((prev) => {
+        if (prev.includes(userId)) return prev;
+        return [...prev, userId];
+      });
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error blocking user:', err);
+      }
+      throw err;
+    }
   };
 
-  const unblockUser = (userId: string) => {
-    setBlockedUsers((prev) => prev.filter((id) => id !== userId));
+  const unblockUser = async (userId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', userId);
+
+      if (error) throw error;
+
+      // Update local state
+      setBlockedUsers((prev) => prev.filter((id) => id !== userId));
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error unblocking user:', err);
+      }
+      throw err;
+    }
   };
 
   const isBlocked = (userId: string): boolean => {
@@ -46,5 +99,6 @@ export function useBlock() {
     blockUser,
     unblockUser,
     isBlocked,
+    loading,
   };
 }

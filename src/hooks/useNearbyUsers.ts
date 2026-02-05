@@ -80,7 +80,9 @@ export function useNearbyUsers(
         .rpc('get_profiles_with_location');
 
       if (profilesError) {
-        console.error('Failed to fetch current user profile:', profilesError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to fetch current user profile:', profilesError);
+        }
         return;
       }
 
@@ -99,7 +101,9 @@ export function useNearbyUsers(
         setCurrentUserProfile(profile);
       }
     } catch (err) {
-      console.error('Error fetching current user profile:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching current user profile:', err);
+      }
     }
   };
 
@@ -171,7 +175,7 @@ export function useNearbyUsers(
         .from('photos')
         .select('id, profile_id, url, is_primary, is_nsfw');
 
-      if (photosError) {
+      if (photosError && process.env.NODE_ENV === 'development') {
         console.warn('Failed to fetch photos:', photosError);
       }
 
@@ -191,7 +195,9 @@ export function useNearbyUsers(
 
       setUsers(transformedUsers);
     } catch (err) {
-      console.error('Failed to fetch users:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to fetch users:', err);
+      }
       setError(err instanceof Error ? err : new Error('Failed to fetch users'));
     } finally {
       setLoading(false);

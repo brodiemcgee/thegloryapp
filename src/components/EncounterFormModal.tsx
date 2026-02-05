@@ -7,6 +7,7 @@ import { XIcon } from './icons';
 import { ACTIVITY_OPTIONS } from './ManualEncounterModal';
 import LocationPicker from './LocationPicker';
 import { LocationData } from '@/hooks/useSavedLocations';
+import { toast } from 'react-hot-toast';
 
 interface EncounterFormModalProps {
   onClose: () => void;
@@ -66,7 +67,7 @@ export default function EncounterFormModal({
       onClose();
     } catch (err) {
       console.error('Failed to save encounter:', err);
-      alert('Failed to save. Please try again.');
+      toast.error('Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -31,7 +31,9 @@ export function useFavorites() {
         .eq('is_favorite', true);
 
       if (error) {
-        console.error('Error fetching favorites:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching favorites:', error);
+        }
       } else {
         setFavorites(data || []);
       }

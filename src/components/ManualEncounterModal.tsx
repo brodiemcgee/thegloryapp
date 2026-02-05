@@ -8,6 +8,7 @@ import LocationPicker from './LocationPicker';
 import { LocationData } from '@/hooks/useSavedLocations';
 import { ContactPickerModal } from './contacts';
 import { ContactWithEncounters } from '@/hooks/useContacts';
+import { toast } from 'react-hot-toast';
 
 // Activity types for encounter logging
 export const ACTIVITY_OPTIONS = [
@@ -109,7 +110,7 @@ export default function ManualEncounterModal({
       onClose();
     } catch (err) {
       console.error('Failed to save encounter:', err);
-      alert('Failed to save. Please try again.');
+      toast.error('Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }

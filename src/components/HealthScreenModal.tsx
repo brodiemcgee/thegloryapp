@@ -7,6 +7,7 @@ import { XIcon } from './icons';
 import { useContactTracingContext, STI_TYPES, ContactToNotify } from '@/contexts/ContactTracingContext';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { StiResult, StiResults, deriveStatusFromResults } from '@/hooks/useHealthScreens';
+import { toast } from 'react-hot-toast';
 
 // Filtered STI list (exclude 'other')
 const TESTABLE_STIS = STI_TYPES.filter(s => s.id !== 'other');
@@ -129,7 +130,7 @@ export default function HealthScreenModal({
       }
     } catch (err) {
       console.error('Failed to save health screen:', err);
-      alert('Failed to save. Please try again.');
+      toast.error('Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }

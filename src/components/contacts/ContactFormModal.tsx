@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { XIcon, ChevronDownIcon } from '../icons';
 import { Contact, ContactHivStatus } from '@/types';
 import { CreateContactData, UpdateContactData } from '@/hooks/useContacts';
+import { toast } from 'react-hot-toast';
 
 // Activity options for what they're into
 const ACTIVITY_OPTIONS = [
@@ -87,7 +88,7 @@ export default function ContactFormModal({
       onClose();
     } catch (err) {
       console.error('Failed to save contact:', err);
-      alert('Failed to save contact. Please try again.');
+      toast.error('Failed to save contact. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -102,7 +103,7 @@ export default function ContactFormModal({
       onClose();
     } catch (err) {
       console.error('Failed to delete contact:', err);
-      alert('Failed to delete contact. Please try again.');
+      toast.error('Failed to delete contact. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -27,7 +27,6 @@ export async function createCheckoutSession(
   options: CheckoutSessionOptions
 ): Promise<{ url: string }> {
   // Mock implementation - in production, this would call your backend API
-  console.log('Creating Stripe Checkout session:', options);
 
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -62,7 +61,6 @@ export async function createPortalSession(
   options: PortalSessionOptions = {}
 ): Promise<{ url: string }> {
   // Mock implementation - in production, this would call your backend API
-  console.log('Creating Stripe Customer Portal session:', options);
 
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -93,8 +91,6 @@ export async function createPortalSession(
  * - invoice.payment_failed - Handle failed payment
  */
 export function handleStripeWebhook(event: any): void {
-  console.log('Handling Stripe webhook event:', event.type);
-
   // In production, you would handle different event types:
   // switch (event.type) {
   //   case 'checkout.session.completed':

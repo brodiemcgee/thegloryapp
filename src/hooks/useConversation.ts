@@ -35,7 +35,9 @@ export function useConversation() {
 
       // If not found (PGRST116 = no rows), create new conversation
       if (searchError && searchError.code !== 'PGRST116') {
-        console.error('Error searching for conversation:', searchError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error searching for conversation:', searchError);
+        }
         return null;
       }
 
@@ -50,13 +52,17 @@ export function useConversation() {
         .single();
 
       if (createError) {
-        console.error('Error creating conversation:', createError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error creating conversation:', createError);
+        }
         return null;
       }
 
       return { id: newConv.id, isNew: true };
     } catch (err) {
-      console.error('Error in getOrCreateConversation:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error in getOrCreateConversation:', err);
+      }
       return null;
     }
   }, [user]);
@@ -79,13 +85,17 @@ export function useConversation() {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading conversations:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error loading conversations:', error);
+        }
         return [];
       }
 
       return data || [];
     } catch (err) {
-      console.error('Error in loadConversations:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error in loadConversations:', err);
+      }
       return [];
     }
   }, [user]);

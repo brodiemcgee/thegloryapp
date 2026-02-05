@@ -151,7 +151,9 @@ export function useReferral(): UseReferralReturn {
         setTransactions(transactionsData as CreditTransaction[]);
       }
     } catch (error) {
-      console.error('Error fetching referral data:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching referral data:', error);
+      }
     } finally {
       setLoading(false);
     }

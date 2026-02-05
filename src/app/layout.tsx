@@ -7,6 +7,7 @@ import AuthProvider from '@/components/auth/AuthProvider';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://theglory.app'),
   title: 'GLORY',
   description: 'Real-time cruising app',
   manifest: '/manifest.json',

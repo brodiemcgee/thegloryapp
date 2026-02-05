@@ -18,6 +18,7 @@ import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useUserInteraction } from '@/hooks/useUserInteraction';
 import { useConversations } from '@/contexts/ConversationsContext';
 import EncounterFormModal from './EncounterFormModal';
+import { toast } from 'react-hot-toast';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -122,7 +123,7 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
         imageUrl = result.url;
       } catch (err) {
         console.error('Failed to upload image:', err);
-        alert('Failed to upload image');
+        toast.error('Failed to upload image');
         return;
       }
     }
@@ -159,13 +160,13 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      toast.error('Please select an image file');
       return;
     }
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+      toast.error('Image must be less than 5MB');
       return;
     }
 
@@ -208,10 +209,15 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     setShowReportModal(false);
   };
 
-  const handleBlock = () => {
-    blockUser(conversation.user.id);
-    setShowBlockModal(false);
-    onBack(); // Go back after blocking
+  const handleBlock = async () => {
+    try {
+      await blockUser(conversation.user.id);
+      setShowBlockModal(false);
+      onBack(); // Go back after blocking
+    } catch (err) {
+      console.error('Failed to block user:', err);
+      // Could show an error toast here
+    }
   };
 
   const handleClearChat = () => {
@@ -233,14 +239,14 @@ export default function ChatView({ conversation, onBack }: ChatViewProps) {
     // Validate UUIDs before attempting to share
     // Mock data uses simple IDs like "1", "2" which aren't valid UUIDs
     if (!isValidUUID(conversation.user.id) || !isValidUUID(conversation.id)) {
-      alert('Album sharing requires a real conversation. This appears to be demo data.');
+      toast.error('Album sharing requires a real conversation. This appears to be demo data.');
       return;
     }
 
     // Grant access to the recipient
     const grantId = await grantAccess(album.id, conversation.user.id, conversation.id);
     if (!grantId) {
-      alert('Failed to share album');
+      toast.error('Failed to share album');
       return;
     }
 

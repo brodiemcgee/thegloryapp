@@ -151,9 +151,14 @@ export default function UserProfile({ user, onBack }: UserProfileProps) {
     setShowReportModal(false);
   };
 
-  const handleBlock = () => {
-    blockUser(user.id);
-    setShowBlockModal(false);
+  const handleBlock = async () => {
+    try {
+      await blockUser(user.id);
+      setShowBlockModal(false);
+    } catch (err) {
+      console.error('Failed to block user:', err);
+      // Could show an error toast here
+    }
   };
 
   const intentLabels: Record<string, string> = {

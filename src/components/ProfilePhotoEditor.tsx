@@ -8,6 +8,7 @@ import { deletePhoto, getPublicUrl, listUserPhotos } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import PhotoUploader from './PhotoUploader';
 import { XIcon, CheckIcon } from './icons';
+import { toast } from 'react-hot-toast';
 
 export interface ProfilePhoto {
   id?: string;
@@ -180,7 +181,7 @@ export default function ProfilePhotoEditor({
       reset();
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('Failed to upload photo. Please try again.');
+      toast.error('Failed to upload photo. Please try again.');
     }
   };
 
@@ -224,7 +225,7 @@ export default function ProfilePhotoEditor({
       onPhotosChange?.(updatedPhotos);
     } catch (err) {
       console.error('Delete failed:', err);
-      alert('Failed to delete photo');
+      toast.error('Failed to delete photo');
     }
   };
 

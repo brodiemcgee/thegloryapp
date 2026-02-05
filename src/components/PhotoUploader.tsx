@@ -4,6 +4,7 @@
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { XIcon } from './icons';
+import { toast } from 'react-hot-toast';
 
 export interface PhotoUploaderProps {
   onUpload: (file: File) => void;
@@ -58,13 +59,13 @@ export default function PhotoUploader({
     // Validate file type
     const acceptedTypes = accept.split(',').map(t => t.trim());
     if (!acceptedTypes.includes(file.type)) {
-      alert(`Invalid file type. Accepted: ${accept}`);
+      toast.error(`Invalid file type. Accepted: ${accept}`);
       return;
     }
 
     // Validate file size
     if (file.size > maxSize) {
-      alert(`File too large. Maximum size: ${maxSize / 1024 / 1024}MB`);
+      toast.error(`File too large. Maximum size: ${maxSize / 1024 / 1024}MB`);
       return;
     }
 

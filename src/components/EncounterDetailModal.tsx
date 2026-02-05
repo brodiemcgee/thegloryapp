@@ -8,6 +8,7 @@ import { XIcon, EditIcon, TrashIcon } from './icons';
 import { ACTIVITY_OPTIONS } from './ManualEncounterModal';
 import LocationPicker from './LocationPicker';
 import { LocationData } from '@/hooks/useSavedLocations';
+import { toast } from 'react-hot-toast';
 
 // Activity labels for display
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -126,7 +127,7 @@ export default function EncounterDetailModal({
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to update encounter:', err);
-      alert('Failed to save changes. Please try again.');
+      toast.error('Failed to save changes. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -141,7 +142,7 @@ export default function EncounterDetailModal({
       onClose();
     } catch (err) {
       console.error('Failed to delete encounter:', err);
-      alert('Failed to delete. Please try again.');
+      toast.error('Failed to delete. Please try again.');
     } finally {
       setDeleting(false);
     }

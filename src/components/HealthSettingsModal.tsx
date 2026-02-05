@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { XIcon } from './icons';
 import { useHealthSettings } from '@/hooks/useHealthSettings';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { toast } from 'react-hot-toast';
 
 interface HealthSettingsModalProps {
   onClose: () => void;
@@ -48,7 +49,7 @@ export default function HealthSettingsModal({ onClose }: HealthSettingsModalProp
       onClose();
     } catch (err) {
       console.error('Failed to save settings:', err);
-      alert('Failed to save settings. Please try again.');
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }

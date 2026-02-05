@@ -22,6 +22,7 @@ import ProfileViewersScreen from './ProfileViewersScreen';
 import PaywallModal from './PaywallModal';
 import { User } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-hot-toast';
 
 export default function ProfileView() {
   const { settings, toggleSfwMode, toggleLocation, updateSettings } = useSettings();
@@ -71,9 +72,18 @@ export default function ProfileView() {
     { value: 'offline', label: 'Offline' },
   ];
 
-  const handleSignOut = () => {
-    // TODO: Implement actual sign out
-    alert('Sign out clicked');
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        toast.error('Failed to sign out. Please try again.');
+      }
+      // Auth state change will be handled by useAuth hook
+    } catch (err) {
+      console.error('Unexpected error during sign out:', err);
+      toast.error('Failed to sign out. Please try again.');
+    }
   };
 
   const handleGhostModeToggle = () => {
@@ -97,9 +107,50 @@ export default function ProfileView() {
     }
   };
 
-  const handleProfileDetailsUpdate = (updates: Partial<User>) => {
+  const handleProfileDetailsUpdate = async (updates: Partial<User>) => {
+    // Update local state immediately for responsive UI
     setUser({ ...user, ...updates });
-    // TODO: Save to Supabase
+
+    // Save to Supabase if authenticated
+    if (!authUser) {
+      console.warn('Cannot save profile: user not authenticated');
+      return;
+    }
+
+    try {
+      // Map User fields to profile table columns
+      const profileUpdates: Record<string, any> = {};
+
+      // Only include fields that exist in the profiles table
+      if ('bio' in updates) profileUpdates.bio = updates.bio;
+      if ('age' in updates) profileUpdates.age = updates.age;
+      if ('height_cm' in updates) profileUpdates.height_cm = updates.height_cm;
+      if ('weight_kg' in updates) profileUpdates.weight_kg = updates.weight_kg;
+      if ('body_type' in updates) profileUpdates.body_type = updates.body_type;
+      if ('ethnicity' in updates) profileUpdates.ethnicity = updates.ethnicity;
+      if ('position' in updates) profileUpdates.position = updates.position;
+      if ('relationship_status' in updates) profileUpdates.relationship_status = updates.relationship_status;
+      if ('looking_for' in updates) profileUpdates.looking_for = updates.looking_for;
+      if ('kinks' in updates) profileUpdates.kinks = updates.kinks;
+      if ('social_links' in updates) profileUpdates.social_links = updates.social_links;
+
+      // Only make the update if there are fields to update
+      if (Object.keys(profileUpdates).length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(profileUpdates)
+          .eq('id', authUser.id);
+
+        if (error) {
+          console.error('Error saving profile:', error);
+          toast.error('Failed to save profile changes. Please try again.');
+          // Optionally revert local state here
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error saving profile:', err);
+      toast.error('Failed to save profile changes. Please try again.');
+    }
   };
 
   // Handle display name editing
